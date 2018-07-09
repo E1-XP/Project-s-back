@@ -1,0 +1,16 @@
+// {
+//     "defaultSeverity": "error",
+//     "extends": [
+//         "tslint-config-airbnb"
+//     ],
+//     "jsRules": {},
+//     "rules": {
+//         "indent": [
+//             true,
+//             "spaces",
+//             4
+//         ],
+//         "match-default-export-name": false
+//     },
+//     "rulesDirectory": []
+// }

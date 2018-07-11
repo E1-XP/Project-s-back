@@ -12,7 +12,7 @@ interface RequestBody {
     password: string;
 }
 
-export class AuthRoutes {
+export class AuthController {
     login = async (req: RequestWithSession, res: Response): Promise<any> => {
         const { email, password } = req.body;
         console.log(req.body);

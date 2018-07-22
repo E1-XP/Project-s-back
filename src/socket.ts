@@ -28,11 +28,12 @@ const initSocket = async (server: Http2Server, redis: RedisClient) => {
 
         try {
             const username = socket.handshake.query.user;
+            const userId = socket.handshake.query.id;
 
             const roomsExists = await redisAsync.existsAsync('rooms');
             const rooms = !!roomsExists ? await redisAsync.hgetallAsync('rooms') : {};
 
-            const socketController = new SocketController(io, socket, username, rooms, redisAsync);
+            const socketController = new SocketController(io, socket, username, userId, rooms, redisAsync);
 
             const currentlyOnline = Object.keys(io.sockets.connected)
                 .reduce(socketController.reduceConnectedHelper, {});

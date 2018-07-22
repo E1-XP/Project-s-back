@@ -18,6 +18,7 @@ export class SocketController {
         private io: Server,
         private socket: Socket,
         private username: string,
+        private userId: number,
         private rooms: RoomsObject,
         private redis: RedisAsyncMethods
     ) { }
@@ -46,23 +47,44 @@ export class SocketController {
         this.io.to(this.roomName).emit(`${this.roomName}/messages`, messages);
     }
 
+    onDraw = (data: object) => {
+        const { userId } = this;
+        //console.log(`${this.username} emits drawing event in ${this.roomName}`);
+
+        // const drawPointsExists = await this.redis.existsAsync(room);
+        // const drawPoints = !!messagesExists ? await this.redis.hgetallAsync(room) : {};
+        const dataObject = { userId, data };
+
+        this.socket.broadcast.to(this.roomName).emit(`${this.roomName}/draw`, dataObject);
+        //this.io.to(this.roomName).emit(`${this.roomName}/draw`, data);
+    }
+
+    onDrawNewGroup = (userId: string) => {
+        this.socket.broadcast.to(this.roomName).emit(`${this.roomName}/draw/newgroup`, userId);
+    }
+
+    onDrawClear = (userId: string) => {
+        this.io.to(this.roomName).emit(`${this.roomName}/draw/reset`, userId);
+    }
+
     onRoomJoin = async (room: string) => {
-        console.log(this.username + ' entered room ' + this.rooms[room]);
+        console.log(`${this.username} entered room ${this.rooms[room]}`);
         this.roomName = room;
         this.socket.join(room);
 
         const roomUsers = Object.keys(this.io.nsps['/'].adapter.rooms[room].sockets)
             .reduce(this.reduceRoomUsersHelper, {});
 
-        console.log(this.io.nsps['/'].adapter.rooms[room])
         this.socket.on(`${room}/messages`, this.onRoomMessage);
+        this.socket.on(`${room}/draw`, this.onDraw);
+        this.socket.on(`${room}/draw/newgroup`, this.onDrawNewGroup);
+        this.socket.on(`${room}/draw/reset`, this.onDrawClear);
         this.socket.on('disconnect', this.onRoomDisconnect);
 
         const messagesExists = await this.redis.existsAsync(room);
         const messages = !!messagesExists ? await this.redis.hgetallAsync(room) : {};
 
         this.io.to(room).emit(`${room}/messages`, messages);
-        console.log(roomUsers, 'to emit')
         this.io.to(room).emit(`${room}/users`, roomUsers);
     }
 
@@ -77,6 +99,9 @@ export class SocketController {
 
         this.io.to(room).emit(`${room}/users`, roomUsers);
         this.socket.off(`${room}/messages`, this.onRoomMessage);
+        this.socket.off(`${room}/draw`, this.onDraw);
+        this.socket.off(`${room}/draw/newgroup`, this.onDrawNewGroup);
+        this.socket.off(`${room}/draw/reset`, this.onDrawClear);
         this.socket.off('disconnect', this.onRoomDisconnect);
     }
 

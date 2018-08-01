@@ -1,27 +1,43 @@
 import { promisify } from 'util';
 import { RedisClient } from 'redis';
 import socket, { Socket } from 'socket.io';
-import { SocketController } from './controllers/socket';
 import { Http2Server } from 'http2';
 
+import { SocketController } from './controllers/socket';
+import { RoomController } from './controllers/room';
+import { DrawingController } from './controllers/drawing';
+
 export interface RedisAsyncMethods {
+    incrAsync: (key: string) => number;
+    getAsync: (key: string) => any;
+    setAsync: (key: string, val: any) => any;
+    hsetAsync: (key: string, field: string, val: any) => any;
     hmsetAsync: (str: string, val: any) => any;
+    hdelAsync: (key: string, field: string) => any;
     hgetallAsync: (str: string) => any;
     delAsync: (str: string) => any;
     existsAsync: (str: string) => number;
+    std: RedisClient
 }
 
 const initSocket = async (server: Http2Server, redis: RedisClient) => {
     const io = socket(server);
 
     const redisAsync: RedisAsyncMethods = {
+        incrAsync: promisify(redis.incr.bind(redis)),
+        getAsync: promisify(redis.get.bind(redis)),
+        setAsync: promisify(redis.set.bind(redis)),
+        hsetAsync: promisify(redis.hset.bind(redis)),
         hmsetAsync: promisify(redis.hmset.bind(redis)),
+        hdelAsync: promisify(redis.hdel.bind(redis)),
         hgetallAsync: promisify(redis.hgetall.bind(redis)),
         delAsync: promisify(redis.del.bind(redis)),
-        existsAsync: promisify(redis.exists.bind(redis))
+        existsAsync: promisify(redis.exists.bind(redis)),
+        std: redis
     };
 
     await redisAsync.delAsync('general/users');
+    await redisAsync.delAsync('rooms');
 
     io.on('connection', async (socket: Socket) => {
         console.log('new connection', socket.handshake.query.user);
@@ -30,22 +46,17 @@ const initSocket = async (server: Http2Server, redis: RedisClient) => {
             const username = socket.handshake.query.user;
             const userId = socket.handshake.query.id;
 
-            const roomsExists = await redisAsync.existsAsync('rooms');
-            const rooms = !!roomsExists ? await redisAsync.hgetallAsync('rooms') : {};
+            const socketController = new SocketController(
+                io,
+                socket,
+                username,
+                userId,
+                new RoomController(),
+                new DrawingController(),
+                redisAsync
+            );
 
-            const socketController = new SocketController(io, socket, username, userId, rooms, redisAsync);
-
-            const currentlyOnline = Object.keys(io.sockets.connected)
-                .reduce(socketController.reduceConnectedHelper, {});
-
-            await redisAsync.hmsetAsync('general/users', currentlyOnline);
-
-            const messagesExists = await redisAsync.existsAsync('general/messages');
-            const messages = !!messagesExists ? await redisAsync.hgetallAsync('general/messages') : {};
-
-            io.sockets.emit('general/users', currentlyOnline);
-            io.sockets.emit('general/messages', messages);
-            io.sockets.emit('rooms/get', rooms);
+            socketController.onConnect();
 
             socket.on('general/messages', socketController.onGeneralMessageReceived);
             socket.on('room/join', socketController.onRoomJoin);

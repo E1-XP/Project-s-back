@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt';
-import { SequelizeStatic, Sequelize } from 'sequelize';
+import { Sequelize, DataTypes } from 'sequelize';
 
 export interface UserType {
     id?: string;
@@ -11,19 +11,26 @@ export interface UserType {
     updatedAt?: string;
 }
 
-const User = function (sequelize: Sequelize, Sequelize: SequelizeStatic) {
-    const _User = sequelize.define('User', {
+const User = function (sequelize: Sequelize, DataTypes: DataTypes) {
+    const _User = sequelize.define('user', {
         username: {
-            type: Sequelize.STRING
+            type: DataTypes.STRING
         },
         email: {
-            type: Sequelize.STRING,
+            type: DataTypes.STRING,
             unique: true
         },
         password: {
-            type: Sequelize.STRING
+            type: DataTypes.STRING
         }
     });
+
+    _User.associate = models => {
+        _User.belongsToMany(models.Drawing, {
+            through: 'usersindrawings',
+            foreignKey: 'userId'
+        });
+    };
 
     _User.beforeCreate(async function (user: any): Promise<void> {
         const hashedPass = await bcrypt.hash(user.password, 10);

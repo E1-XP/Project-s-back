@@ -2,7 +2,6 @@ import { Router } from 'express';
 const router = Router({ mergeParams: true });
 
 import { AuthController } from '../controllers/auth';
-
 const auth = new AuthController();
 
 router.post('/signup', auth.signup);

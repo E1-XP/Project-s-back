@@ -1,5 +1,17 @@
 import { Sequelize, DataTypes } from 'sequelize';
 
+export interface PointsGroup {
+    name: string;
+    roomId: number;
+    userId: number;
+    count: number;
+    arrayGroup: number;
+    x: number;
+    y: number;
+    fill: string;
+    weight: number;
+}
+
 const DrawingPoints = function (sequelize: Sequelize, DataTypes: DataTypes) {
     const _DrawingPoints = sequelize.define('drawingpoints', {
         name: DataTypes.STRING,

@@ -1,7 +1,7 @@
 import { promisify } from 'util';
+import { Http2Server } from 'http2';
 import { RedisClient } from 'redis';
 import socket, { Socket } from 'socket.io';
-import { Http2Server } from 'http2';
 
 import { SocketController } from './controllers/socket';
 import { RoomController } from './controllers/room';

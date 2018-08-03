@@ -1,7 +1,7 @@
 import Sequelize, { SequelizeStatic, Sequelize as ISequelize } from 'sequelize';
 
-export const sequelize = new Sequelize("project-s", "root", "", {
-    host: "127.0.0.1",
+export const sequelize = new Sequelize("dbprojects", "dbprojects", "Cx2yM!t4J-ET", {
+    host: "den1.mysql2.gear.host",
     dialect: "mysql"
 });
 

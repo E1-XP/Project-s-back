@@ -19,6 +19,7 @@
     "express": "^4.16.3",
     "mysql2": "^1.5.3",
     "redis": "^2.8.0",
+    "rxjs": "^6.2.2",
     "sequelize": "^4.38.0",
     "socket.io": "^2.1.1"
   },
@@ -33,6 +34,7 @@
     "@types/morgan": "^1.7.35",
     "@types/mysql2": "github:types/npm-mysql2",
     "@types/redis": "^2.8.6",
+    "@types/rx": "^4.1.1",
     "@types/sequelize": "^4.27.23",
     "@types/socket.io": "^1.4.36",
     "morgan": "^1.9.0",

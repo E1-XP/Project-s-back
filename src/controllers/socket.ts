@@ -1,9 +1,11 @@
-import events from 'events';
 import { Socket, Server } from "socket.io";
-import { RedisAsyncMethods } from "../socket";
+import { fromEvent, Observable } from 'rxjs'
+import { map, buffer, tap } from 'rxjs/operators';
 
-import { RoomController, CreateData } from "./room";
+import { RedisAsyncMethods } from "../socket";
+import { RoomController } from "./room";
 import { DrawingController } from "./drawing";
+import { PointsGroup } from '../models/drawingpoints'
 
 interface MessageObject {
     author: string;
@@ -18,8 +20,6 @@ interface RoomCreateData {
 interface RoomsObject {
     [key: string]: string
 }
-
-const eventEmitter = new events.EventEmitter();
 
 export class SocketController {
     private roomId: string = '';
@@ -83,112 +83,86 @@ export class SocketController {
         this.io.to(this.roomId).emit(`${this.roomId}/messages`, messages);
     }
 
-    onDraw = async (data: object) => {
-        const { userId, roomId } = this;
-
-        //console.log(`${this.username} emits drawing event in ${roomId}`);
-
-        const [drawCount, groupCount, rooms] = await Promise.all([
-            this.redis.incrAsync(`${roomId}/drawCount`),
-            this.redis.getAsync(`${roomId}/groupCount`),
-            this.getRooms()
-        ]);
-
-        const drawingPoint = {
-            ...data,
-            userId,
-            roomId,
-            count: drawCount,
-            arrayGroup: groupCount,
-            name: rooms[roomId].name
-        };
-
-        this.socket.broadcast.to(this.roomId).emit(`${this.roomId}/draw`, drawingPoint);
-
-        await this.redis.hmsetAsync(`${roomId}/drawingGroup/${groupCount}/${drawCount}`, drawingPoint);
-        console.log(drawCount);
-    }
-
-    onDrawNewGroup = async (userId: string) => {
-        const { roomId } = this;
-
-        // const onDrawNewGroupFn = async () => {
-        this.socket.broadcast.to(roomId).emit(`${roomId}/draw/newgroup`, userId);
-        await this.redis.incrAsync(`${roomId}/groupCount`);
-        //  };
-
-        //eventEmitter.addListener(`${roomId}/newGroup`, onDrawNewGroupFn);
-    }
-
-    onDrawMouseUp = async () => {
-        const { roomId } = this;
-
-        console.log('received mouseup event');
-
-        const [drawCount, groupCount] = await Promise.all([
-            this.redis.getAsync(`${roomId}/drawCount`),
-            this.redis.getAsync(`${roomId}/groupCount`)
-        ]);
-
-        let i = 1;
-        const keysToResolve: any[] = [];
-
-        while (i <= drawCount) {
-            keysToResolve.push(`${roomId}/drawingGroup/${groupCount}/${i}`);
-            i += 1;
-        }
-        // const keysToResolve = Array(drawCount).fill(null)
-        //     .map((itm, i) => `${roomId}/drawingGroup/${groupCount}/${i + 1}`);
+    onDrawMouseUp = async (clientDrawCount: number) => {
         //construct an array of drawing points
-        //const drawingGroup = await Promise.all(keysToResolve.map((key) => this.redis.hgetallAsync(key)));
-        //eventEmitter.emit(`${roomId}/drawingGroup/${groupCount}`);
-        //eventEmitter.emit(`${roomId}/newGroup`);
+        // this.redis.std
+        //     .batch(keysToResolve.map(key => ['hgetall', key]))
+        //     .del(`${roomId}/drawCount`)
+        //     .exec((err, replies) => {
+        //         if (err) console.log('redis batch error');
 
-        this.redis.std
-            .batch(keysToResolve.map(key => ['hgetall', key]))
-            .del(`${roomId}/drawCount`)
-            .exec((err, replies) => {
-                if (err) console.log('redis batch error');
-
-                const drawingGroup = replies.slice(0, replies.length - 1);
-                this.drawingController.savePointsGroup(drawingGroup);
-                //remove from redis after db insertion
-                keysToResolve.map((key) => this.redis.delAsync(key));
-            });
-    }
-
-    onDrawClear = (userId: string) => {
-        const { roomId } = this;
-
-        this.io.to(roomId).emit(`${roomId}/draw/reset`, userId);
-        //handle db remove
-        this.drawingController.resetDrawing(roomId);
+        //         const drawingGroup = replies.slice(0, replies.length - 1);
+        //         this.drawingController.savePointsGroup(drawingGroup);
+        //         //remove from redis after db insertion
+        //         keysToResolve.map((key) => this.redis.delAsync(key));
+        //     });
     }
 
     onRoomJoin = async (roomId: string) => {
-        const rooms = await this.getRooms();
+        const { userId } = this;
+
+        const [messages, rooms, existingDrawingPoints] = await Promise.all([
+            this.getMessages(roomId),
+            this.getRooms(),
+            this.drawingController.getRoomDrawingPoints(roomId)
+        ]);
 
         console.log(`${this.username} entered room ${rooms[roomId].name}`);
+
         this.roomId = roomId;
         this.socket.join(roomId);
 
         const roomUsers = Object.keys(this.io.nsps['/'].adapter.rooms[roomId].sockets)
             .reduce(this.reduceRoomUsersHelper, {});
 
-        this.socket.on(`${roomId}/messages`, this.onRoomMessage);
-        this.socket.on(`${roomId}/draw`, this.onDraw);
-        this.socket.on(`${roomId}/draw/newgroup`, this.onDrawNewGroup);
-        this.socket.on(`${roomId}/draw/mouseup`, this.onDrawMouseUp);
-        this.socket.on(`${roomId}/draw/reset`, this.onDrawClear);
-        this.socket.on('disconnect', this.onRoomDisconnect);
+        //consider that this might be modified by other users
+        let drawCount = 0;
+        let groupCount = 0;
+        //be aware of another user firing mouse up -add id to event string?
+        const onMouseUp$ = fromEvent(this.socket, `${roomId}/draw/mouseup`)
+            .pipe(
+                tap(v => { drawCount = 0 })
+            );
 
-        const messages = await this.getMessages(roomId);
+        const onDrawNewGroup$ = fromEvent(this.socket, `${roomId}/draw/newgroup`)
+            .subscribe(() => {
+                groupCount += 1;
+                this.socket.broadcast.to(roomId).emit(`${roomId}/draw/newgroup`, userId);
+            });
+
+        const onDraw$: Observable<PointsGroup[]> = fromEvent(this.socket, `${roomId}/draw`)
+            .pipe(
+                tap(v => { drawCount += 1 }),
+                map(data => ({
+                    ...data,
+                    userId,
+                    roomId,
+                    count: drawCount,
+                    arrayGroup: groupCount,
+                    name: rooms[roomId].name
+                })),
+                tap(point => this.socket.broadcast.to(roomId).emit(`${roomId}/draw`, point)),
+                buffer(onMouseUp$),
+                tap(drawingGroup => {
+                    this.drawingController.savePointsGroup(drawingGroup);
+                })
+            );
+        onDraw$.subscribe();
+
+        const onDrawClear$ = fromEvent(this.socket, `${roomId}/draw/reset`)
+            .subscribe(() => {
+                this.io.to(roomId).emit(`${roomId}/draw/reset`, userId);
+                //handle db remove
+                this.drawingController.resetDrawing(roomId);
+            });
+
+        this.socket.on(`${roomId}/messages`, this.onRoomMessage);
+        this.socket.on('disconnect', this.onRoomDisconnect);
 
         this.io.to(roomId).emit(`${roomId}/messages`, messages);
         this.io.to(roomId).emit(`${roomId}/users`, roomUsers);
 
-        const roomDrawingPoints = await this.drawingController.getRoomDrawingPoints(roomId);
-        this.socket.emit(`${roomId}/draw/getexisting`, roomDrawingPoints);
+        this.socket.emit(`${roomId}/draw/getexisting`, existingDrawingPoints);
     }
 
     onRoomLeave = async (roomId: string) => {
@@ -204,8 +178,10 @@ export class SocketController {
             .reduce(this.reduceRoomUsersHelper, {}) : {};
 
         if (!roomIsNotEmpty) {
-            await this.roomController.delete(roomId);
-            await this.redis.delAsync(roomId);
+            await Promise.all([
+                this.roomController.delete(roomId),
+                this.redis.delAsync(roomId)
+            ]);
 
             const rooms = await this.getRooms();
             this.io.sockets.emit('rooms/get', rooms);
@@ -213,9 +189,6 @@ export class SocketController {
 
         this.io.to(roomId).emit(`${roomId}/users`, roomUsers);
         this.socket.off(`${roomId}/messages`, this.onRoomMessage);
-        this.socket.off(`${roomId}/draw`, this.onDraw);
-        this.socket.off(`${roomId}/draw/newgroup`, this.onDrawNewGroup);
-        this.socket.off(`${roomId}/draw/reset`, this.onDrawClear);
         this.socket.off('disconnect', this.onRoomDisconnect);
     }
 
@@ -232,8 +205,10 @@ export class SocketController {
             .sockets).reduce(this.reduceRoomUsersHelper, {}) : {};
 
         if (!roomIsNotEmpty) {
-            this.roomController.delete(this.roomId);
-            await this.redis.delAsync(this.roomId);
+            await Promise.all([
+                this.roomController.delete(this.roomId),
+                this.redis.delAsync(this.roomId)
+            ]);
 
             const rooms = await this.getRooms();
             this.io.sockets.emit('rooms/get', rooms);

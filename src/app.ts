@@ -2,6 +2,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 import express from 'express';
+import path from 'path';
 import redis from 'redis';
 import morgan from "morgan";
 import bodyParser from 'body-parser';
@@ -34,6 +35,8 @@ const sessionConfig = {
     }
 };
 app.use(session(sessionConfig));
+
+app.use('/static', express.static(path.join(__dirname, 'public')));
 
 app.use('/', routes);
 

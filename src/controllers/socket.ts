@@ -4,17 +4,18 @@ import { map, buffer, tap } from 'rxjs/operators';
 
 import { RedisAsyncMethods } from "../socket";
 import { RoomController } from "./room";
-import { DrawingController } from "./drawing";
+import { IDrawingController } from "./drawing";
 import { PointsGroup } from '../models/drawingpoints'
+import { Room } from "../models/room";
 
 interface MessageObject {
     author: string;
     message: string;
 }
 
-interface RoomCreateData {
-    roomName: string;
-    userId: number;
+interface RoomJoinData {
+    roomId: string;
+    drawingId: number;
 }
 
 interface RoomsObject {
@@ -30,7 +31,7 @@ export class SocketController {
         private username: string,
         private userId: number,
         private roomController: RoomController,
-        private drawingController: DrawingController,
+        private drawingController: IDrawingController,
         private redis: RedisAsyncMethods
     ) { }
 
@@ -98,13 +99,23 @@ export class SocketController {
         //     });
     }
 
-    onRoomJoin = async (roomId: string) => {
+    onDrawChange = async (data: RoomJoinData) => {
+        const { roomId, drawingId } = data;
+
+        const existingDrawingPoints = await this.drawingController.getRoomDrawingPoints(drawingId);
+
+        this.socket.broadcast.to(roomId).emit(`${roomId}/draw/change`, drawingId);
+        this.socket.emit(`${roomId}/draw/getexisting`, existingDrawingPoints);
+    }
+
+    onRoomJoin = async (data: RoomJoinData) => {
         const { userId } = this;
+        const { roomId, drawingId } = data;
 
         const [messages, rooms, existingDrawingPoints] = await Promise.all([
             this.getMessages(roomId),
             this.getRooms(),
-            this.drawingController.getRoomDrawingPoints(roomId)
+            this.drawingController.getRoomDrawingPoints(drawingId)
         ]);
 
         console.log(`${this.username} entered room ${rooms[roomId].name}`);
@@ -115,14 +126,11 @@ export class SocketController {
         const roomUsers = Object.keys(this.io.nsps['/'].adapter.rooms[roomId].sockets)
             .reduce(this.reduceRoomUsersHelper, {});
 
-        //consider that this might be modified by other users
         let drawCount = 0;
         let groupCount = 0;
-        //be aware of another user firing mouse up -add id to event string?
+
         const onMouseUp$ = fromEvent(this.socket, `${roomId}/draw/mouseup`)
-            .pipe(
-                tap(v => { drawCount = 0 })
-            );
+            .pipe(tap(v => { drawCount = 0 }));
 
         const onDrawNewGroup$ = fromEvent(this.socket, `${roomId}/draw/newgroup`)
             .subscribe(() => {
@@ -136,7 +144,6 @@ export class SocketController {
                 map(data => ({
                     ...data,
                     userId,
-                    roomId,
                     count: drawCount,
                     arrayGroup: groupCount,
                     name: rooms[roomId].name
@@ -153,10 +160,11 @@ export class SocketController {
             .subscribe(() => {
                 this.io.to(roomId).emit(`${roomId}/draw/reset`, userId);
                 //handle db remove
-                this.drawingController.resetDrawing(roomId);
+                this.drawingController.resetDrawing(drawingId);
             });
 
         this.socket.on(`${roomId}/messages`, this.onRoomMessage);
+        this.socket.on(`${roomId}/draw/change`, this.onDrawChange);
         this.socket.on('disconnect', this.onRoomDisconnect);
 
         this.io.to(roomId).emit(`${roomId}/messages`, messages);
@@ -218,12 +226,14 @@ export class SocketController {
         this.socket.off('disconnect', this.onRoomDisconnect);
     }
 
-    onRoomCreate = async (data: RoomCreateData) => {
-        const { roomName, userId } = data;
+    onRoomCreate = async (data: Room) => {
+        const { name, adminId, isPrivate, password } = data;
 
         const createdRoom = await this.roomController.create({
-            name: roomName,
-            adminId: userId
+            name,
+            adminId,
+            isPrivate,
+            password: isPrivate ? password : null
         });
 
         const rooms = await this.getRooms();
@@ -251,7 +261,7 @@ export class SocketController {
     }
 
     reduceRoomsHelper = (acc: any, itm: any) => {
-        acc[itm.dataValues.roomId] = itm.dataValues;
+        acc[itm.roomId] = itm;
         return acc;
     }
 

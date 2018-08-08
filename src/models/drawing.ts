@@ -1,11 +1,23 @@
-import { Sequelize, DataTypes } from 'sequelize';
+import { Sequelize, Model, DataTypes, Instance, HasManyAddAssociationMixin } from 'sequelize';
+
+import { UserType } from "./user";
+
+export interface IDrawing {
+    id?: number;
+    name: String;
+    creatorId: number;
+}
+
+export interface DrawingModel extends Model<DrawingInstance, IDrawing> { }
+
+export interface DrawingInstance extends Instance<IDrawing>, IDrawing {
+    addUser: HasManyAddAssociationMixin<UserType, string>;
+}
 
 const Drawing = function (sequelize: Sequelize, DataTypes: DataTypes) {
-    const _Drawing = sequelize.define('drawing', {
+    const _Drawing = sequelize.define<DrawingInstance, IDrawing>('drawing', {
         name: DataTypes.STRING,
-        drawingId: {
-            type: DataTypes.BIGINT
-        }
+        creatorId: DataTypes.INTEGER
     });
 
     _Drawing.associate = models => {

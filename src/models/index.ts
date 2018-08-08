@@ -1,16 +1,21 @@
-import Sequelize, { SequelizeStatic, Sequelize as ISequelize } from 'sequelize';
+import Sequelize, { SequelizeStatic, Model, Sequelize as ISequelize } from 'sequelize';
 
-export const sequelize = new Sequelize("dbprojects", "dbprojects", "Cx2yM!t4J-ET", {
-    host: "den1.mysql2.gear.host",
+import { IDrawing, DrawingInstance } from "./drawing";
+import { UserInstance, UserType } from "./user";
+import { PointsGroup, DrawingPointsInstance } from "./drawingpoints";
+import { Room, RoomInstance } from "./room";
+
+export const sequelize = new Sequelize("project-s", "root", "", {
+    host: "127.0.0.1",
     dialect: "mysql"
 });
 
 interface Models {
     [key: string]: any;
-    User: Sequelize.Model<{}, {}>,
-    Drawing: Sequelize.Model<{}, {}>,
-    DrawingPoints: Sequelize.Model<{}, {}>
-    Room: Sequelize.Model<{}, {}>
+    User: Sequelize.Model<UserInstance, UserType>,
+    Drawing: Sequelize.Model<DrawingInstance, IDrawing>,
+    DrawingPoints: Sequelize.Model<DrawingPointsInstance, PointsGroup>
+    Room: Sequelize.Model<RoomInstance, Room>
 }
 
 interface DB {

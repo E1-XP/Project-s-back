@@ -1,8 +1,7 @@
-import { Sequelize, DataTypes } from 'sequelize';
+import { Sequelize, DataTypes, Model, Instance } from 'sequelize';
 
 export interface PointsGroup {
     name: string;
-    roomId: number;
     userId: number;
     count: number;
     arrayGroup: number;
@@ -10,12 +9,16 @@ export interface PointsGroup {
     y: number;
     fill: string;
     weight: number;
+    drawingId: number;
 }
 
+export interface DrawingPointsModel extends Model<DrawingPointsInstance, PointsGroup> { }
+
+export interface DrawingPointsInstance extends Instance<PointsGroup>, PointsGroup { }
+
 const DrawingPoints = function (sequelize: Sequelize, DataTypes: DataTypes) {
-    const _DrawingPoints = sequelize.define('drawingpoints', {
+    const _DrawingPoints = sequelize.define<DrawingPointsInstance, PointsGroup>('drawingpoints', {
         name: DataTypes.STRING,
-        roomId: DataTypes.BIGINT,
         userId: DataTypes.INTEGER,
         count: DataTypes.INTEGER,
         arrayGroup: DataTypes.INTEGER,

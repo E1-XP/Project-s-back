@@ -1,5 +1,5 @@
 import bcrypt from 'bcrypt';
-import { Sequelize, DataTypes } from 'sequelize';
+import { Sequelize, DataTypes, Instance } from 'sequelize';
 
 export interface UserType {
     id?: string;
@@ -11,8 +11,10 @@ export interface UserType {
     updatedAt?: string;
 }
 
+export interface UserInstance extends Instance<UserType>, UserType { }
+
 const User = function (sequelize: Sequelize, DataTypes: DataTypes) {
-    const _User = sequelize.define('user', {
+    const _User = sequelize.define<UserInstance, UserType>('user', {
         username: {
             type: DataTypes.STRING
         },

@@ -18,8 +18,26 @@ interface RoomJoinData {
     drawingId: number;
 }
 
-interface RoomsObject {
-    [key: string]: string
+interface RoomCreateData extends Room {
+    drawingId: number;
+}
+
+export interface DrawingPointStream {
+    x: number;
+    y: number;
+    fill: number;
+    weight: number;
+    drawingId: number
+}
+
+interface DrawResetData {
+    userId: string;
+    drawingId: number;
+}
+
+interface SetAdminData {
+    roomId: string;
+    userId: number;
 }
 
 export class SocketController {
@@ -36,18 +54,17 @@ export class SocketController {
     ) { }
 
     onConnect = async () => {
-        const rooms = await this.roomController.getAll();
-        const roomsVal = rooms.reduce(this.reduceRoomsHelper, {});
-
-        this.io.sockets.emit('rooms/get', roomsVal);
+        const [rooms, messages] = await Promise.all([
+            this.getRooms(),
+            this.getMessages('general/messages')
+        ]);
 
         const currentlyOnline = Object.keys(this.io.sockets.connected)
             .reduce(this.reduceConnectedHelper, {});
 
         await this.redis.hmsetAsync('general/users', currentlyOnline);
 
-        const messages = await this.getMessages('general/messages');
-
+        this.io.sockets.emit('rooms/get', rooms);
         this.io.sockets.emit('general/users', currentlyOnline);
         this.io.sockets.emit('general/messages', messages);
     }
@@ -103,20 +120,23 @@ export class SocketController {
         const { roomId, drawingId } = data;
 
         const existingDrawingPoints = await this.drawingController.getRoomDrawingPoints(drawingId);
+        this.redis.setAsync(`${roomId}/drawingid`, drawingId);
 
         this.socket.broadcast.to(roomId).emit(`${roomId}/draw/change`, drawingId);
-        this.socket.emit(`${roomId}/draw/getexisting`, existingDrawingPoints);
+        this.io.to(roomId).emit(`${roomId}/draw/getexisting`, existingDrawingPoints);
     }
 
     onRoomJoin = async (data: RoomJoinData) => {
         const { userId } = this;
-        const { roomId, drawingId } = data;
+        const { roomId } = data;
 
-        const [messages, rooms, existingDrawingPoints] = await Promise.all([
+        const [messages, rooms, drawingId] = await Promise.all([
             this.getMessages(roomId),
             this.getRooms(),
-            this.drawingController.getRoomDrawingPoints(drawingId)
+            this.redis.getAsync(`${roomId}/drawingid`)
         ]);
+
+        const existingDrawingPoints = await this.drawingController.getRoomDrawingPoints(drawingId);
 
         console.log(`${this.username} entered room ${rooms[roomId].name}`);
 
@@ -138,10 +158,10 @@ export class SocketController {
                 this.socket.broadcast.to(roomId).emit(`${roomId}/draw/newgroup`, userId);
             });
 
-        const onDraw$: Observable<PointsGroup[]> = fromEvent(this.socket, `${roomId}/draw`)
+        const onDraw$ = fromEvent(this.socket, `${roomId}/draw`)
             .pipe(
                 tap(v => { drawCount += 1 }),
-                map(data => ({
+                map((data: DrawingPointStream) => ({
                     ...data,
                     userId,
                     count: drawCount,
@@ -150,26 +170,32 @@ export class SocketController {
                 })),
                 tap(point => this.socket.broadcast.to(roomId).emit(`${roomId}/draw`, point)),
                 buffer(onMouseUp$),
-                tap(drawingGroup => {
+                tap((drawingGroup: PointsGroup[]) => {
                     this.drawingController.savePointsGroup(drawingGroup);
                 })
             );
+
         onDraw$.subscribe();
 
-        const onDrawClear$ = fromEvent(this.socket, `${roomId}/draw/reset`)
-            .subscribe(() => {
-                this.io.to(roomId).emit(`${roomId}/draw/reset`, userId);
-                //handle db remove
-                this.drawingController.resetDrawing(drawingId);
-            });
+        const onDrawClear$: Observable<DrawResetData> = fromEvent(this.socket, `${roomId}/draw/reset`)
+
+        onDrawClear$.subscribe((data) => {
+            const { drawingId, userId } = data;
+
+            this.io.to(roomId).emit(`${roomId}/draw/reset`, userId);
+            //handle db remove
+            this.drawingController.resetDrawing(drawingId);
+        });
 
         this.socket.on(`${roomId}/messages`, this.onRoomMessage);
         this.socket.on(`${roomId}/draw/change`, this.onDrawChange);
+        this.socket.on(`${roomId}/setadmin`, this.setAdmin);
         this.socket.on('disconnect', this.onRoomDisconnect);
 
         this.io.to(roomId).emit(`${roomId}/messages`, messages);
         this.io.to(roomId).emit(`${roomId}/users`, roomUsers);
 
+        this.socket.emit(`${roomId}/setdrawing`, drawingId);
         this.socket.emit(`${roomId}/draw/getexisting`, existingDrawingPoints);
     }
 
@@ -188,7 +214,8 @@ export class SocketController {
         if (!roomIsNotEmpty) {
             await Promise.all([
                 this.roomController.delete(roomId),
-                this.redis.delAsync(roomId)
+                this.redis.delAsync(roomId),
+                this.redis.delAsync(`${roomId}/drawingid`)
             ]);
 
             const rooms = await this.getRooms();
@@ -196,7 +223,10 @@ export class SocketController {
         }
 
         this.io.to(roomId).emit(`${roomId}/users`, roomUsers);
+
         this.socket.off(`${roomId}/messages`, this.onRoomMessage);
+        this.socket.off(`${roomId}/draw/change`, this.onDrawChange);
+        this.socket.off(`${roomId}/setadmin`, this.setAdmin);
         this.socket.off('disconnect', this.onRoomDisconnect);
     }
 
@@ -215,7 +245,8 @@ export class SocketController {
         if (!roomIsNotEmpty) {
             await Promise.all([
                 this.roomController.delete(this.roomId),
-                this.redis.delAsync(this.roomId)
+                this.redis.delAsync(this.roomId),
+                this.redis.delAsync(`${this.roomId}/drawingid`)
             ]);
 
             const rooms = await this.getRooms();
@@ -226,8 +257,19 @@ export class SocketController {
         this.socket.off('disconnect', this.onRoomDisconnect);
     }
 
-    onRoomCreate = async (data: Room) => {
-        const { name, adminId, isPrivate, password } = data;
+    setAdmin = async (data: SetAdminData) => {
+        const { roomId } = data;
+
+        console.log('new admin set');
+
+        await this.roomController.setAdmin(data);
+
+        const rooms = await this.getRooms();
+        this.io.to(roomId).emit('rooms/get', rooms);
+    }
+
+    onRoomCreate = async (data: RoomCreateData) => {
+        const { name, adminId, isPrivate, password, drawingId } = data;
 
         const createdRoom = await this.roomController.create({
             name,
@@ -236,7 +278,10 @@ export class SocketController {
             password: isPrivate ? password : null
         });
 
-        const rooms = await this.getRooms();
+        const [rooms, _] = await Promise.all([
+            this.getRooms(),
+            this.redis.setAsync(`${createdRoom.dataValues.roomId}/drawingid`, drawingId)
+        ]);
 
         this.io.sockets.emit('rooms/get', rooms);
         this.socket.emit('room/create', createdRoom.dataValues.roomId);

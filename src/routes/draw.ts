@@ -6,5 +6,4 @@ const drawing = new DrawingController();
 
 router.post('/save', drawing.saveAsJPEG);
 
-
 export default router;

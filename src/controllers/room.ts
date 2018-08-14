@@ -1,15 +1,19 @@
 import db from '../models';
 
 import { Room } from '../models/room';
+import { Request, Response } from 'express-serve-static-core';
 
-// interface RoomModel {
-//     dataValues: RoomCreateData;
-// }
+export interface SetAdminData {
+    userId: number;
+    roomId: string;
+}
 
 export interface RoomController {
     getAll: () => Promise<Room[]>;
     create: (v: Room) => Promise<Room>;
     delete: (v: string) => Promise<void>;
+    checkPassword: (req: Request, res: Response) => Promise<void>;
+    setAdmin: (v: SetAdminData) => Promise<void>;
 }
 
 export class RoomController implements RoomController {
@@ -46,5 +50,22 @@ export class RoomController implements RoomController {
         await db.models.Room.destroy({
             where: { roomId }
         });
+    }
+
+    checkPassword = async (req: Request, res: Response) => {
+        const { roomid } = req.params;
+        const { password } = req.body;
+
+        const room = await db.models.Room.findOne({ where: { roomId: roomid } });
+
+        (room && room.getDataValue('password') == password) ?
+            res.status(200).send({ message: 'success' }) :
+            res.status(401).send({ message: 'incorrect password/error' });
+    }
+
+    setAdmin = async (data: SetAdminData) => {
+        const { roomId, userId } = data
+
+        await db.models.Room.update({ adminId: userId }, { where: { roomId } });
     }
 }

@@ -2,9 +2,6 @@ import db from './../models';
 
 import { Request, Response } from 'express-serve-static-core';
 
-import { IDrawing } from "../models/drawing";
-import { UserType } from '../models/user';
-
 export class UserController {
     getDrawings = async (req: Request, res: Response) => {
         const { userid } = req.params;
@@ -57,9 +54,44 @@ export class UserController {
         }
     }
 
-    addDrawingOwner = (req: Request, res: Response) => {
-        const { userId } = req.body;
+    getInboxMessages = async (req: Request, res: Response) => {
+        const { userid } = req.params;
 
-        // await db.
+        try {
+            const messages = await db.models.Invitation
+                .findAll({ where: { receiverId: userid } });
+
+            res.status(200).json({ messages });
+
+        } catch (err) {
+            res.status(500).json({ message: 'internal server error' });
+        }
+    }
+
+    getInboxData = async (userId: number) => {
+        try {
+            const messages = await db.models.Invitation
+                .findAll({ where: { receiverId: userId } });
+
+            return messages;
+        }
+        catch (err) {
+            console.log(err);
+        }
+    }
+
+    updateInboxData = async (data: any) => {
+        try {
+            const { receiverId } = data;
+
+            const message = await db.models.Invitation.create(data);
+
+            const messages = await db.models.Invitation.findAll({ where: { receiverId } });
+
+            return messages;
+
+        } catch (err) {
+            console.log(err);
+        }
     }
 }

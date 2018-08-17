@@ -8,4 +8,6 @@ router.get('/drawings', user.getDrawings);
 
 router.post('/drawings', user.createDrawing);
 
+router.get('/inbox', user.getInboxMessages);
+
 export default router;

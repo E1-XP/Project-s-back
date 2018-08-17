@@ -1,9 +1,10 @@
-import Sequelize, { SequelizeStatic, Model, Sequelize as ISequelize } from 'sequelize';
+import Sequelize, { SequelizeStatic, Sequelize as ISequelize } from 'sequelize';
 
 import { IDrawing, DrawingInstance } from "./drawing";
 import { UserInstance, UserType } from "./user";
 import { PointsGroup, DrawingPointsInstance } from "./drawingpoints";
 import { Room, RoomInstance } from "./room";
+import { IInvitation, InvitationInstance } from "./invitation";
 
 export const sequelize = new Sequelize("project-s", "root", "", {
     host: "127.0.0.1",
@@ -12,10 +13,11 @@ export const sequelize = new Sequelize("project-s", "root", "", {
 
 interface Models {
     [key: string]: any;
-    User: Sequelize.Model<UserInstance, UserType>,
-    Drawing: Sequelize.Model<DrawingInstance, IDrawing>,
-    DrawingPoints: Sequelize.Model<DrawingPointsInstance, PointsGroup>
-    Room: Sequelize.Model<RoomInstance, Room>
+    User: Sequelize.Model<UserInstance, UserType>;
+    Drawing: Sequelize.Model<DrawingInstance, IDrawing>;
+    DrawingPoints: Sequelize.Model<DrawingPointsInstance, PointsGroup>;
+    Room: Sequelize.Model<RoomInstance, Room>;
+    Invitation: Sequelize.Model<IInvitation, InvitationInstance>;
 }
 
 interface DB {
@@ -29,11 +31,12 @@ const db: DB = {
         User: sequelize.import('./user'),
         Drawing: sequelize.import('./drawing'),
         DrawingPoints: sequelize.import('./drawingpoints'),
-        Room: sequelize.import('./room')
+        Room: sequelize.import('./room'),
+        Invitation: sequelize.import('./invitation')
     },
     Sequelize,
     sequelize
-}
+};
 
 Object.keys(db.models).forEach((key) => {
     if ('associate' in db.models[key]) {

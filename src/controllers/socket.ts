@@ -3,10 +3,12 @@ import { fromEvent, Observable } from 'rxjs'
 import { map, buffer, tap } from 'rxjs/operators';
 
 import { RedisAsyncMethods } from "../socket";
+import { UserController } from "./user";
 import { RoomController } from "./room";
 import { IDrawingController } from "./drawing";
 import { PointsGroup } from '../models/drawingpoints'
 import { Room } from "../models/room";
+import { IInvitation } from "../models/invitation";
 
 interface MessageObject {
     author: string;
@@ -48,6 +50,7 @@ export class SocketController {
         private socket: Socket,
         private username: string,
         private userId: number,
+        private userController: UserController,
         private roomController: RoomController,
         private drawingController: IDrawingController,
         private redis: RedisAsyncMethods
@@ -64,9 +67,15 @@ export class SocketController {
 
         await this.redis.hmsetAsync('general/users', currentlyOnline);
 
+        this.socket.join(`${this.userId}/inbox`);
+
         this.io.sockets.emit('rooms/get', rooms);
         this.io.sockets.emit('general/users', currentlyOnline);
         this.io.sockets.emit('general/messages', messages);
+
+        const inboxData = await this.userController.getInboxData(this.userId);
+
+        this.socket.to(`${this.userId}/inbox`).emit(`inbox/get`, inboxData);
     }
 
     getRooms = async () => {
@@ -101,19 +110,14 @@ export class SocketController {
         this.io.to(this.roomId).emit(`${this.roomId}/messages`, messages);
     }
 
-    onDrawMouseUp = async (clientDrawCount: number) => {
-        //construct an array of drawing points
-        // this.redis.std
-        //     .batch(keysToResolve.map(key => ['hgetall', key]))
-        //     .del(`${roomId}/drawCount`)
-        //     .exec((err, replies) => {
-        //         if (err) console.log('redis batch error');
+    onInboxMessage = async (data: IInvitation) => {
+        const { receiverId } = data;
 
-        //         const drawingGroup = replies.slice(0, replies.length - 1);
-        //         this.drawingController.savePointsGroup(drawingGroup);
-        //         //remove from redis after db insertion
-        //         keysToResolve.map((key) => this.redis.delAsync(key));
-        //     });
+        console.log(`${receiverId} received a private message`);
+
+        const inboxData = await this.userController.updateInboxData(data);
+
+        this.io.to(`${receiverId}/inbox`).emit(`inbox/new`, inboxData);
     }
 
     onDrawChange = async (data: RoomJoinData) => {
@@ -200,16 +204,19 @@ export class SocketController {
     }
 
     onRoomLeave = async (roomId: string) => {
+        const { userId, username } = this;
         const rooms = await this.getRooms();
 
-        console.log(`${this.username} leaving room ${rooms[roomId].name}`);
+        console.log(`${username} leaving room ${rooms[roomId].name}`);
 
         this.socket.leave(roomId);
+        this.socket.leave(`${userId}/inbox`);
 
         const roomIsNotEmpty = !!this.io.nsps['/'].adapter.rooms[roomId];
+        const isUserRoomAdmin = Number(rooms[roomId].adminId) === Number(userId);
 
-        const roomUsers = roomIsNotEmpty ? Object.keys(this.io.nsps['/'].adapter.rooms[roomId].sockets)
-            .reduce(this.reduceRoomUsersHelper, {}) : {};
+        const roomUsers = roomIsNotEmpty ? Object.keys(this.io.nsps['/'].adapter
+            .rooms[roomId].sockets).reduce(this.reduceRoomUsersHelper, {}) : {};
 
         if (!roomIsNotEmpty) {
             await Promise.all([
@@ -220,6 +227,9 @@ export class SocketController {
 
             const rooms = await this.getRooms();
             this.io.sockets.emit('rooms/get', rooms);
+        }
+        else if (isUserRoomAdmin) {
+            this.socket.broadcast.to(roomId).emit(`${roomId}/adminleaving`);
         }
 
         this.io.to(roomId).emit(`${roomId}/users`, roomUsers);
@@ -233,14 +243,16 @@ export class SocketController {
     onRoomDisconnect = async () => {
         const rooms = await this.getRooms();
 
-        console.log(`disconnected from ${rooms[this.roomId].name}`);
+        console.log(`${this.username} disconnected from ${rooms[this.roomId].name}`);
 
         this.socket.leave(this.roomId);
+        this.socket.leave(`${this.userId}/inbox`);
 
         const roomIsNotEmpty = !!this.io.nsps['/'].adapter.rooms[this.roomId];
+        const isUserRoomAdmin = Number(rooms[this.roomId].adminId) === Number(this.userId);
 
-        const roomUsers = roomIsNotEmpty ? Object.keys(this.io.nsps['/'].adapter.rooms[this.roomId]
-            .sockets).reduce(this.reduceRoomUsersHelper, {}) : {};
+        const roomUsers = roomIsNotEmpty ? Object.keys(this.io.nsps['/'].adapter
+            .rooms[this.roomId].sockets).reduce(this.reduceRoomUsersHelper, {}) : {};
 
         if (!roomIsNotEmpty) {
             await Promise.all([
@@ -251,6 +263,9 @@ export class SocketController {
 
             const rooms = await this.getRooms();
             this.io.sockets.emit('rooms/get', rooms);
+        }
+        else if (isUserRoomAdmin) {
+            this.socket.broadcast.to(this.roomId).emit(`${this.roomId}/adminleaving`);
         }
 
         this.io.to(this.roomId).emit(`${this.roomId}/users`, roomUsers);

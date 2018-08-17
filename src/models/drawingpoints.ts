@@ -1,6 +1,7 @@
 import { Sequelize, DataTypes, Model, Instance } from 'sequelize';
 
 export interface PointsGroup {
+    id?: number;
     name: string;
     userId: number;
     count: number;
@@ -10,6 +11,9 @@ export interface PointsGroup {
     fill: string;
     weight: number;
     drawingId: number;
+    archived?: boolean;
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface DrawingPointsModel extends Model<DrawingPointsInstance, PointsGroup> { }

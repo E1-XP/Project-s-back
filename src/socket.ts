@@ -6,6 +6,7 @@ import socket, { Socket } from 'socket.io';
 import { SocketController } from './controllers/socket';
 import { RoomController } from './controllers/room';
 import { DrawingController } from './controllers/drawing';
+import { UserController } from './controllers/user';
 
 export interface RedisAsyncMethods {
     incrAsync: (key: string) => number;
@@ -51,6 +52,7 @@ const initSocket = async (server: Http2Server, redis: RedisClient) => {
                 socket,
                 username,
                 userId,
+                new UserController(),
                 new RoomController(),
                 new DrawingController(),
                 redisAsync
@@ -59,6 +61,7 @@ const initSocket = async (server: Http2Server, redis: RedisClient) => {
             socketController.onConnect();
 
             socket.on('general/messages', socketController.onGeneralMessageReceived);
+            socket.on(`${userId}/inbox`, socketController.onInboxMessage);
             socket.on('room/join', socketController.onRoomJoin);
             socket.on('room/leave', socketController.onRoomLeave);
             socket.on('room/create', socketController.onRoomCreate);

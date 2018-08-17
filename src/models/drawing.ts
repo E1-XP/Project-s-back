@@ -6,6 +6,9 @@ export interface IDrawing {
     id?: number;
     name: String;
     creatorId: number;
+    archived?: boolean;
+    createdAt?: string;
+    updatedAt?: string;
 }
 
 export interface DrawingModel extends Model<DrawingInstance, IDrawing> { }

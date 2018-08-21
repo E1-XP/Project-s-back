@@ -4,6 +4,7 @@ import { IDrawing, DrawingInstance } from "./drawing";
 import { UserInstance, UserType } from "./user";
 import { PointsGroup, DrawingPointsInstance } from "./drawingpoints";
 import { Room, RoomInstance } from "./room";
+import { Message, MessageInstance } from "./message";
 import { IInvitation, InvitationInstance } from "./invitation";
 
 export const sequelize = new Sequelize("project-s", "root", "", {
@@ -17,6 +18,7 @@ interface Models {
     Drawing: Sequelize.Model<DrawingInstance, IDrawing>;
     DrawingPoints: Sequelize.Model<DrawingPointsInstance, PointsGroup>;
     Room: Sequelize.Model<RoomInstance, Room>;
+    Message: Sequelize.Model<MessageInstance, Message>;
     Invitation: Sequelize.Model<IInvitation, InvitationInstance>;
 }
 
@@ -32,6 +34,7 @@ const db: DB = {
         Drawing: sequelize.import('./drawing'),
         DrawingPoints: sequelize.import('./drawingpoints'),
         Room: sequelize.import('./room'),
+        Message: sequelize.import('./message'),
         Invitation: sequelize.import('./invitation')
     },
     Sequelize,

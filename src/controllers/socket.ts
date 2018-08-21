@@ -11,6 +11,7 @@ import { Room } from "../models/room";
 import { IInvitation } from "../models/invitation";
 
 interface MessageObject {
+    authorId: number;
     author: string;
     message: string;
 }
@@ -59,7 +60,7 @@ export class SocketController {
     onConnect = async () => {
         const [rooms, messages] = await Promise.all([
             this.getRooms(),
-            this.getMessages('general/messages')
+            this.getMessages()
         ]);
 
         const currentlyOnline = Object.keys(this.io.sockets.connected)
@@ -83,30 +84,31 @@ export class SocketController {
         return rooms.reduce(this.reduceRoomsHelper, {});
     }
 
-    getMessages = async (roomId: string) => {
-        const messagesExists = await this.redis.existsAsync(roomId);
-        return !!messagesExists ? await this.redis.hgetallAsync(roomId) : {};
+    getMessages = async (roomId?: string) => {
+        const messages = await this.roomController.getMessages(roomId);
+        return messages;
     }
 
     onGeneralMessageReceived = async (data: MessageObject) => {
         console.log('got a new general message');
-        const { message, author } = data;
 
-        const messages = await this.getMessages('general/messages');
-        messages[Date.now()] = `${message}\n${author}`;
+        const messages = await this.roomController.sendMessage({
+            ...data,
+            isGeneral: true
+        })
 
-        await this.redis.hmsetAsync('general/messages', messages);
         this.io.sockets.emit('general/messages', messages);
     }
 
     onRoomMessage = async (data: MessageObject) => {
         console.log(`message posted in ${this.roomId}`);
-        const { message, author } = data;
 
-        const messages = await this.getMessages(this.roomId);
-        messages[Date.now()] = `${message}\n${author}`;
+        const messages = await this.roomController.sendMessage({
+            ...data,
+            isGeneral: false,
+            roomId: Number(this.roomId)
+        });
 
-        await this.redis.hmsetAsync(this.roomId, messages);
         this.io.to(this.roomId).emit(`${this.roomId}/messages`, messages);
     }
 
@@ -327,7 +329,7 @@ export class SocketController {
 
     reduceConnectedHelper = (acc: any, itm: any) => {
         const src = this.io.sockets.connected[itm].handshake.query;
-        acc[src.user] = src.id;
+        acc[src.id] = src.user;
         return acc;
     };
 

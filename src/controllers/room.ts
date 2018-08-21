@@ -8,6 +8,14 @@ export interface SetAdminData {
     roomId: string;
 }
 
+export interface sendMessageData {
+    authorId: number;
+    author: string;
+    message: string;
+    roomId?: number | null;
+    isGeneral: boolean;
+}
+
 export interface RoomController {
     getAll: () => Promise<Room[]>;
     create: (v: Room) => Promise<Room>;
@@ -67,5 +75,32 @@ export class RoomController implements RoomController {
         const { roomId, userId } = data
 
         await db.models.Room.update({ adminId: userId }, { where: { roomId } });
+    }
+
+    getMessages = async (roomId?: string) => {
+        const isMessageGeneral = !roomId;
+
+        const conditions = isMessageGeneral ?
+            { isGeneral: true } :
+            { roomId };
+
+        const messages = await db.models.Message.findAll({ where: conditions });
+
+        return messages;
+    }
+
+    sendMessage = async (data: sendMessageData) => {
+        const { roomId } = data;
+        const isMessageGeneral = data.isGeneral;
+
+        await db.models.Message.create(data);
+
+        const conditions = isMessageGeneral ?
+            { isGeneral: true } :
+            { roomId };
+
+        const messages = await db.models.Message.findAll({ where: conditions })
+
+        return messages;
     }
 }

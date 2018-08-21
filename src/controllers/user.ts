@@ -3,6 +3,17 @@ import db from './../models';
 import { Request, Response } from 'express-serve-static-core';
 
 export class UserController {
+    getUsers = async (params?: any) => {
+        try {
+            const users = await db.models.User.findAll({ where: params || {} });
+
+            return users;
+        }
+        catch (err) {
+            console.log(err);
+        }
+    }
+
     getDrawings = async (req: Request, res: Response) => {
         const { userid } = req.params;
 

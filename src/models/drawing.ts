@@ -30,7 +30,7 @@ const Drawing = function (sequelize: Sequelize, DataTypes: DataTypes) {
         });
         _Drawing.hasMany(models.DrawingPoints, {
             foreignKey: 'drawingId'
-        })
+        });
     };
 
     return _Drawing;

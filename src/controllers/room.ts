@@ -100,7 +100,7 @@ export class RoomController implements RoomController {
             { roomId };
 
         const messages = await db.models.Message.findAll({ where: conditions })
-
+        console.log(messages, 'CHECK THIS');
         return messages;
     }
 }

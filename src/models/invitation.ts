@@ -4,6 +4,7 @@ export interface IInvitation {
     id?: number;
     roomId: number;
     senderId: number;
+    senderName: string;
     receiverId: number;
     archived?: boolean;
     createdAt?: string;
@@ -16,8 +17,9 @@ export interface InvitationInstance extends Instance<IInvitation>, IInvitation {
 
 const Invitation = function (sequelize: Sequelize, DataTypes: DataTypes) {
     const _Invitation = sequelize.define<InvitationInstance, IInvitation>('invitation', {
-        roomId: DataTypes.INTEGER,
+        roomId: DataTypes.BIGINT,
         senderId: DataTypes.INTEGER,
+        senderName: DataTypes.STRING,
         receiverId: DataTypes.INTEGER
     });
 

@@ -30,7 +30,7 @@ export class DrawingController implements IDrawingController {
         const { roomid } = req.params;
         const { image, drawingId } = req.body;
 
-        const dirPath = path.join(__dirname, `../public/images`);
+        const dirPath = path.join(__dirname, `../../public/images`);
 
         image.replace(/^data:image\/\w+;base64,/, "");
         const data = image.slice(image.indexOf(',') + 1).replace(/\s/g, '+');

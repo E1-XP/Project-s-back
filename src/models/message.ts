@@ -22,7 +22,7 @@ const Message = function (sequelize: Sequelize, DataTypes: DataTypes) {
         authorId: DataTypes.INTEGER,
         author: DataTypes.STRING,
         message: DataTypes.STRING,
-        roomId: DataTypes.INTEGER,
+        roomId: DataTypes.BIGINT,
         isGeneral: DataTypes.BOOLEAN
     });
 

@@ -82,7 +82,10 @@ export class UserController {
     getInboxData = async (userId: number) => {
         try {
             const messages = await db.models.Invitation
-                .findAll({ where: { receiverId: userId } });
+                .findAll({
+                    where: { receiverId: userId },
+                    order: [['id', 'DESC']]
+                });
 
             return messages;
         }
@@ -97,7 +100,10 @@ export class UserController {
 
             const message = await db.models.Invitation.create(data);
 
-            const messages = await db.models.Invitation.findAll({ where: { receiverId } });
+            const messages = await db.models.Invitation.findAll({
+                where: { receiverId },
+                order: [['id', 'DESC']]
+            });
 
             return messages;
 

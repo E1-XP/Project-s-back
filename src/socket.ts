@@ -60,7 +60,7 @@ const initSocket = async (server: Http2Server, redis: RedisClient) => {
 
             socketController.onConnect();
 
-            socket.on('general/messages', socketController.onGeneralMessageReceived);
+            socket.on('general/messages', socketController.onGeneralMessage);
             socket.on(`${userId}/inbox`, socketController.onInboxMessage);
             socket.on('room/join', socketController.onRoomJoin);
             socket.on('room/leave', socketController.onRoomLeave);

@@ -36,7 +36,7 @@ const sessionConfig = {
 };
 app.use(session(sessionConfig));
 
-app.use('/static', express.static(path.join(__dirname, 'public')));
+app.use('/static', express.static(path.join(__dirname, '../public')));
 
 app.use('/', routes);
 

@@ -89,7 +89,7 @@ export class SocketController {
         return messages;
     }
 
-    onGeneralMessageReceived = async (data: MessageObject) => {
+    onGeneralMessage = async (data: MessageObject) => {
         console.log('got a new general message');
 
         const messages = await this.roomController.sendMessage({

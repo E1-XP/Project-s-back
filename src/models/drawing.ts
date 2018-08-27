@@ -4,7 +4,7 @@ import { UserType } from "./user";
 
 export interface IDrawing {
     id?: number;
-    name: String;
+    name: string;
     creatorId: number;
     archived?: boolean;
     createdAt?: string;

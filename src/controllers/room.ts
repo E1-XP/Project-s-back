@@ -1,106 +1,106 @@
-import db from '../models';
+import { inject } from "inversify";
+import { controller, interfaces, httpPost } from "inversify-express-utils";
+import { TYPES } from "./../container/types";
 
-import { Room } from '../models/room';
-import { Request, Response } from 'express-serve-static-core';
+import db from "../models";
+
+import { Room } from "../models/room";
+import { Request, Response } from "express-serve-static-core";
 
 export interface SetAdminData {
-    userId: number;
-    roomId: string;
+  userId: number;
+  roomId: string;
 }
 
 export interface sendMessageData {
-    authorId: number;
-    author: string;
-    message: string;
-    roomId?: number | null;
-    isGeneral: boolean;
+  authorId: number;
+  author: string;
+  message: string;
+  roomId?: number | null;
+  isGeneral: boolean;
 }
-
 export interface RoomController {
-    getAll: () => Promise<Room[]>;
-    create: (v: Room) => Promise<Room>;
-    delete: (v: string) => Promise<void>;
-    checkPassword: (req: Request, res: Response) => Promise<void>;
-    setAdmin: (v: SetAdminData) => Promise<void>;
+  getAll: () => Promise<Room[]>;
+  create: (v: Room) => Promise<Room>;
+  delete: (v: string) => Promise<void>;
+  // checkPassword: (req: Request, res: Response) => Promise<void>;
+  setAdmin: (v: SetAdminData) => Promise<void>;
 }
 
+controller("/rooms/:roomid");
 export class RoomController implements RoomController {
-    getAll = async () => {
+  getAll = async () => {
+    const allRooms = <Room[]>await db.models.Room.findAll({});
 
-        const allRooms = <Room[]>await db.models.Room.findAll({});
+    return <Room[]>allRooms.map(itm =>
+      Object.keys(itm.dataValues).reduce((acc: any, key) => {
+        if (key !== "password") acc[key] = itm.dataValues[key];
+        return acc;
+      }, {})
+    );
+  };
 
-        return <Room[]>allRooms.map(itm =>
+  create = async (data: Room) => {
+    const { name, adminId, isPrivate, password } = data;
 
-            Object.keys(itm.dataValues).reduce((acc: any, key) => {
-                if (key !== 'password') acc[key] = itm.dataValues[key];
-                return acc;
-            }, {}));
-    }
+    const roomCreated = <Room>await db.models.Room.create({
+      name,
+      adminId,
+      roomId: Date.now(),
+      password,
+      isPrivate
+    });
 
-    create = async (data: Room) => {
-        const { name, adminId, isPrivate, password } = data;
+    return <Room>Object.keys(roomCreated).reduce((acc: any, key) => {
+      if (key !== "password") acc[key] = roomCreated[key];
+      return acc;
+    }, {});
+  };
 
-        const roomCreated = <Room>await db.models.Room.create({
-            name,
-            adminId,
-            roomId: Date.now(),
-            password,
-            isPrivate
-        });
+  delete = async (roomId: string) => {
+    await db.models.Room.destroy({
+      where: { roomId }
+    });
+  };
 
-        return <Room>Object.keys(roomCreated).reduce((acc: any, key) => {
-            if (key !== 'password') acc[key] = roomCreated[key];
-            return acc;
-        }, {});
-    }
+  @httpPost("/checkpassword")
+  async checkPassword(req: Request, res: Response) {
+    const { roomid } = req.params;
+    const { password } = req.body;
 
-    delete = async (roomId: string) => {
-        await db.models.Room.destroy({
-            where: { roomId }
-        });
-    }
+    const room = await db.models.Room.findOne({ where: { roomId: roomid } });
 
-    checkPassword = async (req: Request, res: Response) => {
-        const { roomid } = req.params;
-        const { password } = req.body;
+    room && room.getDataValue("password") === password
+      ? res.status(200).send({ message: "success" })
+      : res.status(401).send({ message: "incorrect password/error" });
+  }
 
-        const room = await db.models.Room.findOne({ where: { roomId: roomid } });
+  setAdmin = async (data: SetAdminData) => {
+    const { roomId, userId } = data;
 
-        (room && room.getDataValue('password') == password) ?
-            res.status(200).send({ message: 'success' }) :
-            res.status(401).send({ message: 'incorrect password/error' });
-    }
+    await db.models.Room.update({ adminId: userId }, { where: { roomId } });
+  };
 
-    setAdmin = async (data: SetAdminData) => {
-        const { roomId, userId } = data
+  getMessages = async (roomId?: string) => {
+    const isMessageGeneral = !roomId;
 
-        await db.models.Room.update({ adminId: userId }, { where: { roomId } });
-    }
+    const conditions = isMessageGeneral ? { isGeneral: true } : { roomId };
 
-    getMessages = async (roomId?: string) => {
-        const isMessageGeneral = !roomId;
+    const messages = await db.models.Message.findAll({ where: conditions });
 
-        const conditions = isMessageGeneral ?
-            { isGeneral: true } :
-            { roomId };
+    return messages;
+  };
 
-        const messages = await db.models.Message.findAll({ where: conditions });
+  sendMessage = async (data: sendMessageData) => {
+    const { roomId } = data;
+    const isMessageGeneral = data.isGeneral;
 
-        return messages;
-    }
+    await db.models.Message.create(data);
 
-    sendMessage = async (data: sendMessageData) => {
-        const { roomId } = data;
-        const isMessageGeneral = data.isGeneral;
+    const conditions = isMessageGeneral ? { isGeneral: true } : { roomId };
 
-        await db.models.Message.create(data);
-
-        const conditions = isMessageGeneral ?
-            { isGeneral: true } :
-            { roomId };
-
-        const messages = await db.models.Message.findAll({ where: conditions })
-        console.log(messages, 'CHECK THIS');
-        return messages;
-    }
+    const messages = await db.models.Message.findAll({ where: conditions });
+    console.log(messages, "CHECK THIS");
+    return messages;
+  };
 }

@@ -1,59 +1,46 @@
-import * as dotenv from 'dotenv';
-dotenv.config();
+import "reflect-metadata";
+import { InversifyExpressServer } from "inversify-express-utils";
+import { container } from "./container";
 
-import express from 'express';
-import path from 'path';
-import redis from 'redis';
+import express from "express";
+import path from "path";
 import morgan from "morgan";
-import bodyParser from 'body-parser';
-import cors from 'cors';
-import compression from 'compression';
-import session from 'client-sessions';
+import bodyParser from "body-parser";
+import cors from "cors";
+import compression from "compression";
+import session from "client-sessions";
 
-const PORT: string | number = process.env.PORT || 3001;
-export const app = express();
+import "./controllers";
 
-import routes from './routes';
-import db from './models';
-import initSocket from './socket';
+const ORIGIN_URL = "http://localhost:8080";
 
-//app.use(morgan("combined"));
-app.use(compression());
-app.use(bodyParser.json());
-app.use(cors({
-    origin: 'http://localhost:8080',
-    credentials: true
-}));
+const corsConfig = {
+  origin: ORIGIN_URL,
+  credentials: true
+};
 
 const sessionConfig = {
-    cookieName: 'session',
-    secret: String(process.env.SECRET_KEY),
-    duration: 1000 * 60 * 60 * 8, //8h
-    cookie: {
-        ephemeral: true,
-        httpOnly: true
-    }
+  cookieName: "session",
+  secret: String(process.env.SECRET_KEY),
+  duration: 1000 * 60 * 60 * 8, //8h
+  cookie: {
+    ephemeral: true,
+    httpOnly: true
+  }
 };
-app.use(session(sessionConfig));
 
-app.use('/static', express.static(path.join(__dirname, '../public')));
+const server = new InversifyExpressServer(container);
 
-app.use('/', routes);
+server.setConfig(app => {
+  app.use(morgan("dev"));
+  app.use(compression());
+  app.use(bodyParser.json());
+  app.use(cors(corsConfig));
+  app.use(session(sessionConfig));
 
-const host = 'redis-17443.c8.us-east-1-2.ec2.cloud.redislabs.com';
-const port = 17443;
-const password = 'z5FbgMgk8fTmbpt2KdXm9qsMw276skm4';
+  app.use("/static", express.static(path.join(__dirname, "../public")));
+});
 
-(async () => {
-    await db.sequelize.sync();
+const app = server.build();
 
-    const redisDB = redis.createClient(port, host);
-    redisDB.auth(password);
-
-    const server = app.listen(PORT, () => console.log(`Listening on ${PORT}`));
-
-    redisDB.on('connect', () => console.log('redis client connected.'));
-    redisDB.on('error', (err) => console.log('redis error: ', err));
-
-    initSocket(server, redisDB);
-})();
+export { app };

@@ -4,11 +4,12 @@ import { container } from "./container";
 
 import express from "express";
 import path from "path";
+import helmet from "helmet";
 import morgan from "morgan";
+import cookieParser from "cookie-parser";
 import bodyParser from "body-parser";
 import cors from "cors";
 import compression from "compression";
-import session from "client-sessions";
 
 import "./controllers";
 
@@ -19,24 +20,15 @@ const corsConfig = {
   credentials: true
 };
 
-const sessionConfig = {
-  cookieName: "session",
-  secret: String(process.env.SECRET_KEY),
-  duration: 1000 * 60 * 60 * 8, //8h
-  cookie: {
-    ephemeral: true,
-    httpOnly: true
-  }
-};
-
 const server = new InversifyExpressServer(container);
 
 server.setConfig(app => {
   app.use(morgan("dev"));
+  app.use(helmet());
   app.use(compression());
+  app.use(cookieParser());
   app.use(bodyParser.json());
   app.use(cors(corsConfig));
-  app.use(session(sessionConfig));
 
   app.use("/static", express.static(path.join(__dirname, "../public")));
 });

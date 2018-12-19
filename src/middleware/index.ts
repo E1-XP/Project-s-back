@@ -1,12 +1,31 @@
-// import {
-//   Request,
-//   Response,
-//   NextFunction,
-//   Errback
-// } from "express-serve-static-core";
+import { injectable } from "inversify";
+import {
+  Request,
+  Response,
+  NextFunction,
+  Errback
+} from "express-serve-static-core";
 
-// export const asyncErrorHandler = (fn: any) => (
-//   req: Request,
-//   res: Response,
-//   next: NextFunction
-// ) => Promise.resolve(fn(req, res, next)).catch((err: Errback) => next(err));
+import jwt, { VerifyCallback } from "jsonwebtoken";
+
+@injectable()
+export class Middlewares {
+  authRequired(req: Request, res: Response, next: NextFunction) {
+    try {
+      const token = req.cookies.token;
+
+      jwt.verify(token, process.env.SECRET_KEY!, <VerifyCallback>(
+        function(err, decoded: any) {
+          if (decoded) {
+            res.locals.userId = decoded.userId;
+            next();
+          } else {
+            res.status(401).json({ message: "Please log in first" });
+          }
+        }
+      ));
+    } catch (err) {
+      res.status(401).json({ message: "Please log in first" });
+    }
+  }
+}

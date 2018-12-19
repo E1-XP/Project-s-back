@@ -1,5 +1,6 @@
 import { inject } from "inversify";
 import { controller, interfaces, httpPost } from "inversify-express-utils";
+import { container } from "./../container";
 import { TYPES } from "./../container/types";
 
 import db from "../models";
@@ -27,7 +28,10 @@ export interface RoomController {
   setAdmin: (v: SetAdminData) => Promise<void>;
 }
 
-controller("/rooms/:roomid");
+controller(
+  "/rooms/:roomid",
+  container.get<any>(TYPES.Middlewares).authRequired
+);
 export class RoomController implements RoomController {
   getAll = async () => {
     const allRooms = <Room[]>await db.models.Room.findAll({});

@@ -2,6 +2,9 @@ import fs from "fs";
 import path from "path";
 import { controller, httpPost } from "inversify-express-utils";
 
+import { container } from "./../container";
+import { TYPES } from "./../container/types";
+
 import { Request, Response } from "express-serve-static-core";
 
 import db from "../models";
@@ -15,7 +18,10 @@ export interface IDrawingController {
   resetDrawing: (v: number) => Promise<any>;
 }
 
-@controller("/rooms/:roomid/drawing")
+@controller(
+  "/rooms/:roomid/drawing",
+  container.get<any>(TYPES.Middlewares).authRequired
+)
 export class DrawingController implements IDrawingController {
   getRoomDrawingPoints = async (drawingId: number) => {
     const RoomDrawingPoints = await db.models.DrawingPoints.findAll({

@@ -1,3 +1,5 @@
+import { container } from "./../container";
+import { TYPES } from "./../container/types";
 import {
   controller,
   interfaces,
@@ -9,7 +11,10 @@ import db from "./../models";
 
 import { Request, Response } from "express-serve-static-core";
 
-@controller("/users/:userid")
+@controller(
+  "/users/:userid",
+  container.get<any>(TYPES.Middlewares).authRequired
+)
 export class UserController implements interfaces.Controller {
   getUsers = async (params?: any) => {
     try {

@@ -35,7 +35,7 @@ export class AuthController implements interfaces.Controller {
           .json({ message: "user/password combination not found" });
       } else {
         if (bcrypt.compareSync(password, user.password)) {
-          const { email, username, id } = user;
+          const { id } = user;
 
           const payload = {
             userId: id,
@@ -44,7 +44,7 @@ export class AuthController implements interfaces.Controller {
           const token = jwt.sign(payload, process.env.SECRET_KEY!);
 
           res.cookie("token", token, { httpOnly: true });
-          res.status(200).json({ email, username, id });
+          res.status(200).json({ message: "success", id });
         }
       }
     } catch (err) {
@@ -83,6 +83,26 @@ export class AuthController implements interfaces.Controller {
 
       res.cookie("token", token, { httpOnly: true });
       res.status(200).json({ email, username, id });
+    } catch (err) {
+      console.log(err);
+      res.status(500).json({ message: "internal server error" });
+    }
+  }
+
+  @httpPost("/emailcheck")
+  async emailCheck(req: Request, res: Response) {
+    try {
+      const possibleDuplicate = await db.models.User.findOne({
+        where: { email: req.body.email }
+      });
+
+      if (possibleDuplicate) {
+        return res
+          .status(409)
+          .json({ message: "user with same email already exist" });
+      } else {
+        res.status(200).json({ message: "success" });
+      }
     } catch (err) {
       console.log(err);
       res.status(500).json({ message: "internal server error" });

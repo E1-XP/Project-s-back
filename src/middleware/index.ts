@@ -16,6 +16,7 @@ export class Middlewares {
 
       jwt.verify(token, process.env.SECRET_KEY!, <VerifyCallback>(
         function(err, decoded: any) {
+          if (err) console.log(err);
           if (decoded) {
             res.locals.userId = decoded.userId;
             next();

@@ -16,6 +16,25 @@ import { Request, Response } from "express-serve-static-core";
   container.get<any>(TYPES.Middlewares).authRequired
 )
 export class UserController implements interfaces.Controller {
+  @httpGet("/")
+  async getUser(req: Request, res: Response) {
+    try {
+      const { userId } = res.locals;
+
+      const user = await db.models.User.findById(userId);
+
+      if (user) {
+        const { email, username } = user;
+
+        res.status(200).json({ email, username, id: userId });
+      } else {
+        res.status(401).json({ message: "invalid data provided" });
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
   getUsers = async (params?: any) => {
     try {
       const users = await db.models.User.findAll({ where: params || {} });
@@ -47,6 +66,7 @@ export class UserController implements interfaces.Controller {
 
   @httpPost("/drawings")
   async createDrawing(req: Request, res: Response) {
+    console.log(req.body);
     const { name, userId } = req.body;
 
     try {

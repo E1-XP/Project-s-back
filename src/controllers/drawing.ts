@@ -32,13 +32,12 @@ export class DrawingController implements IDrawingController {
   };
 
   savePointsGroup = async (data: PointsGroup[]) => {
-    console.log("RECEIVED DATA:", data);
+    // console.log("RECEIVED DATA:", data);
     await db.models.DrawingPoints.bulkCreate(data);
   };
 
   @httpPost("/save")
   saveAsJPEG(req: Request, res: Response) {
-    const { roomid } = req.params;
     const { image, drawingId } = req.body;
 
     const dirPath = path.join(__dirname, `../../public/images`);
@@ -50,7 +49,9 @@ export class DrawingController implements IDrawingController {
     if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath);
 
     fs.writeFileSync(`${dirPath}/${drawingId}.jpg`, buff);
+
     console.log("file saved");
+    res.status(200).json({ message: "success" });
   }
 
   resetDrawing = async (drawingId: number) => {

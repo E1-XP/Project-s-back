@@ -3,24 +3,15 @@ dotenv.config();
 
 import { app } from "./app";
 import db from "./models";
-import redis from "redis";
+import { redisDB } from "./models/redis";
 
-import redisConfig from "./../config/redis";
+const PORT = +process.env.PORT! || 3001;
 
-const PORT: string | number = process.env.PORT || 3001;
-
-import initSocket from "./socket";
+import { initSocket } from "./socket";
 
 (async () => {
   await db.sequelize.sync();
-
-  const redisDB = redis.createClient(redisConfig.port!, redisConfig.host!);
-  redisDB.auth(redisConfig.password!);
-
   const server = app.listen(PORT, () => console.log(`Listening on ${PORT}`));
-
-  redisDB.on("connect", () => console.log("redis client connected."));
-  redisDB.on("error", err => console.log("redis error: ", err));
 
   initSocket(server, redisDB);
 })().catch((err: any) => console.log(err));

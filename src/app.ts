@@ -33,6 +33,4 @@ server.setConfig(app => {
   app.use("/static", express.static(path.join(__dirname, "../public")));
 });
 
-const app = server.build();
-
-export { app };
+export const app = server.build();

@@ -28,10 +28,10 @@ export interface RoomController {
   setAdmin: (v: SetAdminData) => Promise<void>;
 }
 
-controller(
+@controller(
   "/rooms/:roomid",
   container.get<any>(TYPES.Middlewares).authRequired
-);
+)
 export class RoomController implements RoomController {
   getAll = async () => {
     const allRooms = <Room[]>await db.models.Room.findAll({});

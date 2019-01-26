@@ -2,13 +2,13 @@ import { Socket, Server } from "socket.io";
 import { fromEvent, Observable } from "rxjs";
 import { map, buffer, tap } from "rxjs/operators";
 
-import { RedisAsyncMethods } from "../socket";
 import { UserController } from "./user";
 import { RoomController } from "./room";
 import { IDrawingController } from "./drawing";
 import { PointsGroup } from "../models/drawingpoints";
 import { Room } from "../models/room";
 import { IInvitation } from "../models/invitation";
+import { RedisClient } from "redis";
 
 interface MessageObject {
   authorId: number;
@@ -54,7 +54,7 @@ export class SocketController {
     private userController: UserController,
     private roomController: RoomController,
     private drawingController: IDrawingController,
-    private redis: RedisAsyncMethods
+    private redis: RedisClient
   ) {}
 
   onConnect = async () => {
@@ -68,16 +68,16 @@ export class SocketController {
       {}
     );
 
-    await this.redis.hmsetAsync("general/users", currentlyOnline);
+    await this.redis.hmset("general/users", currentlyOnline);
 
-    this.socket.join(`${this.userId}/inbox`);
-
-    this.io.sockets.emit("rooms/get", rooms);
-    this.io.sockets.emit("general/users", currentlyOnline);
-    this.io.sockets.emit("general/messages", messages);
+    const initialData = { rooms, messages, users: currentlyOnline };
 
     const inboxData = await this.userController.getInboxData(this.userId);
 
+    this.socket.join(`${this.userId}/inbox`);
+
+    this.io.to(this.socket.id).emit(`${this.userId}/connect`, initialData);
+    this.socket.broadcast.emit("general/users", currentlyOnline);
     this.socket.to(`${this.userId}/inbox`).emit(`inbox/get`, inboxData);
   };
 
@@ -130,7 +130,7 @@ export class SocketController {
     const existingDrawingPoints = await this.drawingController.getRoomDrawingPoints(
       drawingId
     );
-    this.redis.setAsync(`${roomId}/drawingid`, drawingId);
+    this.redis.set(`${roomId}/drawingid`, String(drawingId));
 
     this.socket.broadcast.to(roomId).emit(`${roomId}/draw/change`, drawingId);
     this.io
@@ -145,7 +145,7 @@ export class SocketController {
     const [messages, rooms, drawingId] = await Promise.all([
       this.getMessages(roomId),
       this.getRooms(),
-      this.redis.getAsync(`${roomId}/drawingid`)
+      <any>this.redis.get(`${roomId}/drawingid`)
     ]);
 
     const existingDrawingPoints = await this.drawingController.getRoomDrawingPoints(
@@ -247,8 +247,8 @@ export class SocketController {
     if (!roomIsNotEmpty) {
       await Promise.all([
         this.roomController.delete(roomId),
-        this.redis.delAsync(roomId),
-        this.redis.delAsync(`${roomId}/drawingid`)
+        this.redis.del(roomId),
+        this.redis.del(`${roomId}/drawingid`)
       ]);
 
       const rooms = await this.getRooms();
@@ -288,8 +288,8 @@ export class SocketController {
     if (!roomIsNotEmpty) {
       await Promise.all([
         this.roomController.delete(this.roomId),
-        this.redis.delAsync(this.roomId),
-        this.redis.delAsync(`${this.roomId}/drawingid`)
+        this.redis.del(this.roomId),
+        this.redis.del(`${this.roomId}/drawingid`)
       ]);
 
       const rooms = await this.getRooms();
@@ -325,9 +325,9 @@ export class SocketController {
 
     const [rooms, _] = await Promise.all([
       this.getRooms(),
-      this.redis.setAsync(
+      this.redis.set(
         `${createdRoom.dataValues.roomId}/drawingid`,
-        drawingId
+        String(drawingId)
       )
     ]);
 
@@ -346,10 +346,10 @@ export class SocketController {
     currentlyOnline[this.username] && delete currentlyOnline[this.username];
 
     if (Object.keys(currentlyOnline).length) {
-      await this.redis.hmsetAsync("users", currentlyOnline);
+      await this.redis.hmset("users", currentlyOnline);
       this.io.sockets.emit("general/users", currentlyOnline);
     } else {
-      await this.redis.delAsync("users");
+      await this.redis.del("users");
       this.io.sockets.emit("general/users", {});
     }
   };

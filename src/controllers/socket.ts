@@ -1,11 +1,9 @@
 import { Socket, Server } from "socket.io";
-import { fromEvent, Observable } from "rxjs";
-import { map, buffer, tap } from "rxjs/operators";
 
 import { UserController } from "./user";
 import { RoomController } from "./room";
 import { IDrawingController } from "./drawing";
-import { PointsGroup } from "../models/drawingpoints";
+import { DrawingPoint } from "../models/drawingpoints";
 import { Room } from "../models/room";
 import { IInvitation } from "../models/invitation";
 import { RedisClient } from "redis";
@@ -25,12 +23,9 @@ interface RoomCreateData extends Room {
   drawingId: number;
 }
 
-export interface DrawingPointStream {
-  x: number;
-  y: number;
-  fill: number;
-  weight: number;
-  drawingId: number;
+interface DrawMouseUpData {
+  userId: number;
+  group: number;
 }
 
 interface DrawResetData {
@@ -161,55 +156,32 @@ export class SocketController {
       this.io.nsps["/"].adapter.rooms[roomId].sockets
     ).reduce(this.reduceRoomUsersHelper, {});
 
-    let drawCount = 0;
-    let groupCount = 0;
+    // const onDrawNewGroup$ = fromEvent(
+    //   this.socket,
+    //   `${roomId}/draw/newgroup`
+    // ).subscribe(() => {
+    //   groupCount += 1;
+    //   this.socket.broadcast.to(roomId).emit(`${roomId}/draw/newgroup`, userId);
+    // });
+    let cachedPoints: DrawingPoint[] = [];
+    this.socket.on(`${roomId}/draw`, async (point: DrawingPoint) => {
+      console.log(point);
 
-    const onMouseUp$ = fromEvent(this.socket, `${roomId}/draw/mouseup`).pipe(
-      tap(v => {
-        drawCount = 0;
-      })
-    );
-
-    const onDrawNewGroup$ = fromEvent(
-      this.socket,
-      `${roomId}/draw/newgroup`
-    ).subscribe(() => {
-      groupCount += 1;
-      this.socket.broadcast.to(roomId).emit(`${roomId}/draw/newgroup`, userId);
+      this.socket.broadcast.to(roomId).emit(`${roomId}/draw`, point);
+      cachedPoints.push(point);
     });
 
-    const onDraw$ = fromEvent(this.socket, `${roomId}/draw`).pipe(
-      tap(v => {
-        drawCount += 1;
-      }),
-      map((data: DrawingPointStream) => ({
-        ...data,
-        userId,
-        count: drawCount,
-        arrayGroup: groupCount,
-        name: rooms[roomId].name
-      })),
-      tap(point =>
-        this.socket.broadcast.to(roomId).emit(`${roomId}/draw`, point)
-      ),
-      buffer(onMouseUp$),
-      tap((drawingGroup: PointsGroup[]) => {
-        this.drawingController.savePointsGroup(drawingGroup);
-      })
-    );
+    this.socket.on(`${roomId}/draw/mouseup`, async (data: DrawMouseUpData) => {
+      console.log("received mouseup");
 
-    onDraw$.subscribe();
+      this.drawingController.savePointsGroup(cachedPoints);
+      cachedPoints = [];
+    });
 
-    const onDrawClear$: Observable<DrawResetData> = fromEvent(
-      this.socket,
-      `${roomId}/draw/reset`
-    );
-
-    onDrawClear$.subscribe(data => {
+    this.socket.on(`${roomId}/draw/reset`, data => {
       const { drawingId, userId } = data;
 
       this.io.to(roomId).emit(`${roomId}/draw/reset`, userId);
-      //handle db remove
       this.drawingController.resetDrawing(drawingId);
     });
 

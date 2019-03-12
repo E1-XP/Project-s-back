@@ -2,12 +2,12 @@ import Sequelize, { SequelizeStatic, Sequelize as ISequelize } from "sequelize";
 
 import { IDrawing, DrawingInstance } from "./drawing";
 import { UserInstance, UserType } from "./user";
-import { PointsGroup, DrawingPointsInstance } from "./drawingpoints";
+import { DrawingPoint, DrawingPointsInstance } from "./drawingpoints";
 import { Room, RoomInstance } from "./room";
 import { Message, MessageInstance } from "./message";
 import { IInvitation, InvitationInstance } from "./invitation";
 
-import DBConfig from "./../../config/db";
+import DBConfig from "./../config/db";
 
 export const sequelize = new Sequelize(
   DBConfig.name!,
@@ -23,7 +23,7 @@ interface Models {
   [key: string]: any;
   User: Sequelize.Model<UserInstance, UserType>;
   Drawing: Sequelize.Model<DrawingInstance, IDrawing>;
-  DrawingPoints: Sequelize.Model<DrawingPointsInstance, PointsGroup>;
+  DrawingPoints: Sequelize.Model<DrawingPointsInstance, DrawingPoint>;
   Room: Sequelize.Model<RoomInstance, Room>;
   Message: Sequelize.Model<MessageInstance, Message>;
   Invitation: Sequelize.Model<IInvitation, InvitationInstance>;

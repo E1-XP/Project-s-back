@@ -1,13 +1,13 @@
 import { Sequelize, DataTypes, Model, Instance } from "sequelize";
 
 export interface Room {
+  [key: string]: any;
   id?: number;
   name: string;
   roomId?: number;
   adminId: number;
   isPrivate: boolean;
   password: string | null;
-  [key: string]: any;
   archived?: boolean;
   createdAt?: string;
   updatedAt?: string;

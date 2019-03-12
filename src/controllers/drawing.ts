@@ -9,11 +9,11 @@ import { Request, Response } from "express-serve-static-core";
 
 import db from "../models";
 
-import { PointsGroup, DrawingPointsInstance } from "../models/drawingpoints";
+import { DrawingPoint, DrawingPointsInstance } from "../models/drawingpoints";
 
 export interface IDrawingController {
   getRoomDrawingPoints: (v: number) => Promise<DrawingPointsInstance[]>;
-  savePointsGroup: (data: PointsGroup[]) => Promise<any>;
+  savePointsGroup: (data: DrawingPoint[]) => Promise<any>;
   saveAsJPEG: (req: Request, res: Response) => void;
   resetDrawing: (v: number) => Promise<any>;
 }
@@ -31,7 +31,7 @@ export class DrawingController implements IDrawingController {
     return RoomDrawingPoints;
   };
 
-  savePointsGroup = async (data: PointsGroup[]) => {
+  savePointsGroup = async (data: DrawingPoint[]) => {
     // console.log("RECEIVED DATA:", data);
     await db.models.DrawingPoints.bulkCreate(data);
   };

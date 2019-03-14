@@ -23,11 +23,6 @@ interface RoomCreateData extends Room {
   drawingId: number;
 }
 
-interface DrawMouseUpData {
-  userId: number;
-  group: number;
-}
-
 interface DrawResetData {
   userId: string;
   drawingId: number;
@@ -76,12 +71,12 @@ export class SocketController {
     this.socket.to(`${this.userId}/inbox`).emit(`inbox/get`, inboxData);
   };
 
-  getRooms = async () => {
+  private getRooms = async () => {
     const rooms = await this.roomController.getAll();
     return rooms.reduce(this.reduceRoomsHelper, {});
   };
 
-  getMessages = async (roomId?: string) => {
+  private getMessages = async (roomId?: string) => {
     const messages = await this.roomController.getMessages(roomId);
     return messages;
   };
@@ -134,7 +129,6 @@ export class SocketController {
   };
 
   onRoomJoin = async (data: RoomJoinData) => {
-    const { userId } = this;
     const { roomId } = data;
 
     const [messages, rooms, drawingId] = await Promise.all([
@@ -156,26 +150,58 @@ export class SocketController {
       this.io.nsps["/"].adapter.rooms[roomId].sockets
     ).reduce(this.reduceRoomUsersHelper, {});
 
-    // const onDrawNewGroup$ = fromEvent(
-    //   this.socket,
-    //   `${roomId}/draw/newgroup`
-    // ).subscribe(() => {
-    //   groupCount += 1;
-    //   this.socket.broadcast.to(roomId).emit(`${roomId}/draw/newgroup`, userId);
-    // });
     let cachedPoints: DrawingPoint[] = [];
     this.socket.on(`${roomId}/draw`, async (point: DrawingPoint) => {
-      console.log(point);
-
       this.socket.broadcast.to(roomId).emit(`${roomId}/draw`, point);
       cachedPoints.push(point);
     });
 
-    this.socket.on(`${roomId}/draw/mouseup`, async (data: DrawMouseUpData) => {
-      console.log("received mouseup");
+    this.socket.on(`${roomId}/draw/mouseup`, (data: string) => {
+      if (this.isGroupSameLengthAndOrderCheck(data, cachedPoints)) {
+        // perform check on other users
+        this.socket.broadcast.emit(`${roomId}/drawgroupcheck`, data);
+      } else {
+        console.log("incorrect data");
 
-      this.drawingController.savePointsGroup(cachedPoints);
+        const groupInfo = data
+          .split("|")
+          .slice(0, 3)
+          .map(Number);
+
+        this.socket.emit(`${roomId}/resendcorrectdrawdata`, groupInfo);
+        this.socket.once(
+          `${roomId}/resendcorrectdrawdata`,
+          async correctGroup => {
+            if (!correctGroup.length) return;
+
+            await this.drawingController.replaceDrawingPointsGroup(
+              correctGroup
+            );
+
+            this.socket.broadcast
+              .to(roomId)
+              .emit(`${roomId}/sendcorrectgroup`, correctGroup);
+          }
+        );
+      }
+
+      this.drawingController.savePointsBulk(cachedPoints);
       cachedPoints = [];
+    });
+
+    this.socket.on(`${roomId}/sendcorrectgroup`, async (data: string) => {
+      const [userIdStr, drawingIdStr, groupStr, tstamps] = data.split("|");
+      const test = tstamps.split(".").map(str => Number(str));
+
+      const correctGroup = await this.drawingController.getRoomDrawingPointsGroup(
+        Number(userIdStr),
+        Number(drawingIdStr),
+        Number(groupStr)
+      );
+
+      if (correctGroup.length === test.length) {
+        this.socket.emit(`${roomId}/sendcorrectgroup`, correctGroup);
+      }
     });
 
     this.socket.on(`${roomId}/draw/reset`, data => {
@@ -196,6 +222,20 @@ export class SocketController {
     this.socket.emit(`${roomId}/setdrawing`, drawingId);
     this.socket.emit(`${roomId}/draw/getexisting`, existingDrawingPoints);
   };
+
+  private isGroupSameLengthAndOrderCheck(
+    data: string,
+    cachedPoints: DrawingPoint[]
+  ) {
+    const [userIdStr, drawingIdStr, groupStrStr, tstamps] = data.split("|");
+    const test = tstamps.split(".").map(Number);
+
+    if (!cachedPoints.length || cachedPoints.length !== test.length) {
+      return false;
+    }
+
+    return test.every((tstamp, i) => tstamp === cachedPoints[i].date);
+  }
 
   onRoomLeave = async (roomId: string) => {
     const { userId, username } = this;
@@ -274,7 +314,7 @@ export class SocketController {
     this.socket.off("disconnect", this.onRoomDisconnect);
   };
 
-  setAdmin = async (data: SetAdminData) => {
+  private setAdmin = async (data: SetAdminData) => {
     const { roomId } = data;
 
     console.log("new admin set");
@@ -326,18 +366,18 @@ export class SocketController {
     }
   };
 
-  reduceRoomsHelper = (acc: any, itm: any) => {
+  private reduceRoomsHelper = (acc: any, itm: any) => {
     acc[itm.roomId] = itm;
     return acc;
   };
 
-  reduceConnectedHelper = (acc: any, itm: any) => {
+  private reduceConnectedHelper = (acc: any, itm: any) => {
     const src = this.io.sockets.connected[itm].handshake.query;
     acc[src.id] = src.user;
     return acc;
   };
 
-  reduceRoomUsersHelper = (acc: any, itm: string) => {
+  private reduceRoomUsersHelper = (acc: any, itm: string) => {
     const { id, user } = this.io.nsps["/"].connected[itm].handshake.query;
     acc[id] = user;
     return acc;

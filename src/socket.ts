@@ -12,7 +12,7 @@ export const initSocket = async (server: Http2Server, redis: RedisClient) => {
 
   await redis.del("general/users");
   await redis.del("rooms");
-  
+
   io.on("connection", (socket: Socket) => {
     console.log("new connection", socket.handshake.query.user);
 
@@ -20,12 +20,12 @@ export const initSocket = async (server: Http2Server, redis: RedisClient) => {
       const username = socket.handshake.query.user;
       const userId = socket.handshake.query.id;
 
-      const socketController = new SocketController(
+      const socketController = new SocketController( // TODO use DI
         io,
         socket,
         username,
         userId,
-        new UserController(),
+        new UserController(), // TODO use DI
         new RoomController(),
         new DrawingController(),
         redis

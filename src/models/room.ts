@@ -4,7 +4,7 @@ export interface Room {
   [key: string]: any;
   id?: number;
   name: string;
-  roomId?: number;
+  roomId: number;
   adminId: number;
   isPrivate: boolean;
   password: string | null;

@@ -1,4 +1,5 @@
 import { injectable } from "inversify";
+
 export interface RequestBody {
   email: string;
   username: string;

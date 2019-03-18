@@ -2,45 +2,129 @@ import { Http2Server } from "http2";
 import { RedisClient } from "redis";
 import socket, { Socket } from "socket.io";
 
-import { SocketController } from "./controllers/socket";
-import { RoomController } from "./controllers/room";
-import { DrawingController } from "./controllers/drawing";
-import { UserController } from "./controllers/user";
+import { redisDB } from "./models/redis";
 
-export const initSocket = async (server: Http2Server, redis: RedisClient) => {
-  const io = socket(server);
+import { SocketRoomService, ISocketRoomService } from "./services/socketRoom";
+import { SocketDrawingService } from "./services/socketDrawing";
+import { SocketMessageService } from "./services/socketMessages";
 
-  await redis.del("general/users");
-  await redis.del("rooms");
+export class SocketInitializer {
+  private server: Http2Server;
+  private redis: RedisClient;
+  private io: socket.Server;
+  private socket: Socket | null = null;
+  private roomService: ISocketRoomService | null = null;
+  private userId: number | null = null;
+  private username: string | null = null;
 
-  io.on("connection", (socket: Socket) => {
+  constructor(server: Http2Server, redis: RedisClient) {
+    this.server = server;
+    this.redis = redis;
+    this.io = socket(server);
+
+    this.onInit();
+  }
+
+  async onInit() {
+    await this.redis.del("general/users");
+    await this.redis.del("rooms");
+
+    this.io.on("connection", this.onConnect.bind(this));
+  }
+
+  private onConnect(socket: Socket) {
     console.log("new connection", socket.handshake.query.user);
 
-    try {
-      const username = socket.handshake.query.user;
-      const userId = socket.handshake.query.id;
+    this.socket = socket;
 
-      const socketController = new SocketController( // TODO use DI
-        io,
-        socket,
-        username,
-        userId,
-        new UserController(), // TODO use DI
-        new RoomController(),
-        new DrawingController(),
-        redis
+    try {
+      this.username = socket.handshake.query.user;
+      this.userId = socket.handshake.query.id;
+
+      this.roomService = new SocketRoomService(
+        this.io,
+        this.socket,
+        this.username!,
+        this.userId!,
+        new SocketMessageService(this.io),
+        new SocketDrawingService(socket, this.io)
       );
 
-      socketController.onConnect();
-
-      socket.on("general/messages", socketController.onGeneralMessage);
-      socket.on(`${userId}/inbox`, socketController.onInboxMessage);
-      socket.on("room/join", socketController.onRoomJoin);
-      socket.on("room/leave", socketController.onRoomLeave);
-      socket.on("room/create", socketController.onRoomCreate);
-      socket.on("disconnect", socketController.onUserDisconnected);
+      this.onConnectHandler();
+      this.bindHandlers();
     } catch (err) {
       console.log(err);
     }
-  });
-};
+  }
+
+  private bindHandlers() {
+    if (!this.roomService || !this.socket) {
+      throw new Error("initialization error");
+    }
+
+    this.socket.on(
+      "general/messages",
+      this.roomService.messageService.onGeneralMessage.bind(
+        this.roomService.messageService
+      )
+    );
+    this.socket.on(
+      `${this.userId}/inbox`,
+      this.roomService.messageService.onInboxMessage.bind(
+        this.roomService.messageService
+      )
+    );
+    this.socket.on(
+      "room/join",
+      this.roomService.onRoomJoin.bind(this.roomService)
+    );
+    this.socket.on(
+      "room/leave",
+      this.roomService.onRoomLeave.bind(this.roomService)
+    );
+    this.socket.on(
+      "room/create",
+      this.roomService.onRoomCreate.bind(this.roomService)
+    );
+    this.socket.on(
+      "disconnect",
+      this.roomService.onUserDisconnected.bind(this.roomService)
+    );
+  }
+
+  private async onConnectHandler() {
+    if (!this.roomService || !this.socket || !this.userId) {
+      throw new Error("initialization error");
+    }
+
+    const [rooms, messages] = await Promise.all([
+      this.roomService.getRooms(),
+      this.roomService.messageService.getMessages()
+    ]);
+
+    const currentlyOnline = Object.keys(this.io.sockets.connected).reduce(
+      this.reduceConnected.bind(this),
+      {}
+    );
+
+    await redisDB.hmset("general/users", currentlyOnline);
+
+    const initialData = { rooms, messages, users: currentlyOnline };
+
+    const inboxData = await this.roomService.messageService.getInboxData(
+      this.userId
+    );
+
+    this.socket.join(`${this.userId}/inbox`);
+
+    this.io.to(this.socket.id).emit(`${this.userId}/connect`, initialData);
+    this.socket.broadcast.emit("general/users", currentlyOnline);
+    this.socket.to(`${this.userId}/inbox`).emit(`inbox/get`, inboxData);
+  }
+
+  private reduceConnected(acc: any, itm: string) {
+    const src = this.io.sockets.connected[itm].handshake.query;
+    acc[src.id] = src.user;
+    return acc;
+  }
+}

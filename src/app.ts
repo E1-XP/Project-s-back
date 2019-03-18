@@ -1,4 +1,5 @@
 import "reflect-metadata";
+
 import { InversifyExpressServer } from "inversify-express-utils";
 import { container } from "./container";
 

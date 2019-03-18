@@ -35,16 +35,6 @@ export class UserController implements interfaces.Controller {
     }
   }
 
-  getUsers = async (params?: any) => {
-    try {
-      const users = await db.models.User.findAll({ where: params || {} });
-
-      return users;
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
   @httpGet("/drawings")
   async getDrawings(req: Request, res: Response) {
     const { userid } = req.params;
@@ -109,34 +99,4 @@ export class UserController implements interfaces.Controller {
       res.status(500).json({ message: "internal server error" });
     }
   }
-
-  getInboxData = async (userId: number) => {
-    try {
-      const messages = await db.models.Invitation.findAll({
-        where: { receiverId: userId },
-        order: [["id", "DESC"]]
-      });
-
-      return messages;
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
-  updateInboxData = async (data: any) => {
-    try {
-      const { receiverId } = data;
-
-      const message = await db.models.Invitation.create(data);
-
-      const messages = await db.models.Invitation.findAll({
-        where: { receiverId },
-        order: [["id", "DESC"]]
-      });
-
-      return messages;
-    } catch (err) {
-      console.log(err);
-    }
-  };
 }

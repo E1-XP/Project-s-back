@@ -1,4 +1,3 @@
-import { injectable } from "inversify";
 import { Socket, Server } from "socket.io";
 
 import { DrawingPoint, DrawingPointsInstance } from "./../models/drawingpoints";
@@ -22,9 +21,8 @@ export interface ISocketDrawingService {
   getRoomDrawingPoints(drawingId: number): Promise<DrawingPointsInstance[]>;
 }
 
-@injectable()
 export class SocketDrawingService implements ISocketDrawingService {
-  cachedPoints: DrawingPoint[] = [];
+  private cachedPoints: DrawingPoint[] = [];
   roomId: string | null = null;
 
   constructor(private socket: Socket, private server: Server) {}
@@ -51,6 +49,7 @@ export class SocketDrawingService implements ISocketDrawingService {
         .map(Number);
 
       this.socket.emit(`${this.roomId}/resendcorrectdrawdata`, groupInfo);
+
       this.socket.once(
         `${this.roomId}/resendcorrectdrawdata`,
         async correctGroup => {

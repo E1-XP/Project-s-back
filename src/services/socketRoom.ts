@@ -37,7 +37,7 @@ export interface ISocketRoomService {
   messageService: ISocketMessageService;
   drawingService: ISocketDrawingService;
   onRoomJoin(data: RoomJoinData): void;
-  onRoomLeave(roomId: string): void;
+  onRoomLeave(): void;
   onRoomDisconnect(): void;
   onRoomCreate(data: RoomCreateData): void;
   onUserDisconnected(): void;
@@ -45,13 +45,13 @@ export interface ISocketRoomService {
 }
 
 export class SocketRoomService implements ISocketRoomService {
-  private roomId: string = "";
+  private roomId: string | null = null;
+  private username: string | null = null;
+  private userId: number | null = null;
 
   constructor(
     private io: Server,
     private socket: Socket,
-    private username: string,
-    private userId: number,
     public messageService: ISocketMessageService,
     public drawingService: ISocketDrawingService
   ) {}
@@ -72,6 +72,9 @@ export class SocketRoomService implements ISocketRoomService {
     console.log(`${this.username} entered room ${rooms[roomId].name}`);
 
     this.roomId = roomId;
+    this.username = this.socket.handshake.query.user;
+    this.userId = this.socket.handshake.query.id;
+
     this.drawingService.roomId = roomId;
     this.messageService.roomId = roomId;
 
@@ -81,7 +84,7 @@ export class SocketRoomService implements ISocketRoomService {
       this.io.nsps["/"].adapter.rooms[roomId].sockets
     ).reduce(this.reduceRoomUsers.bind(this), {});
 
-    this.bindHandlers();
+    this.toggleHandlers("on");
 
     this.io.to(roomId).emit(`${roomId}/messages`, messages);
     this.io.to(roomId).emit(`${roomId}/users`, roomUsers);
@@ -90,52 +93,49 @@ export class SocketRoomService implements ISocketRoomService {
     this.socket.emit(`${roomId}/draw/getexisting`, existingDrawingPoints);
   }
 
-  private bindHandlers() {
-    this.socket.on(
+  private toggleHandlers(mode: "on" | "off") {
+    this.socket[mode](
+      `${this.roomId}/messages`,
+      this.messageService.onRoomMessage.bind(this.messageService)
+    );
+
+    this.socket[mode](
+      `${this.roomId}/messages/write`,
+      this.messageService.onMessageWrite.bind(this.messageService)
+    );
+
+    this.socket[mode](
       `${this.roomId}/draw`,
       this.drawingService.onDraw.bind(this.drawingService)
     );
 
-    this.socket.on(
+    this.socket[mode](
       `${this.roomId}/draw/mouseup`,
       this.drawingService.onMouseUp.bind(this.drawingService)
     );
 
-    this.socket.on(
+    this.socket[mode](
       `${this.roomId}/sendcorrectgroup`,
       this.drawingService.onSendCorrectGroup.bind(this.drawingService)
     );
 
-    this.socket.on(
+    this.socket[mode](
       `${this.roomId}/draw/reset`,
       this.drawingService.onDrawReset.bind(this.drawingService)
     );
 
-    this.socket.on(
-      `${this.roomId}/messages`,
-      this.messageService.onRoomMessage.bind(this.messageService)
-    );
-    this.socket.on(
+    this.socket[mode](
       `${this.roomId}/draw/change`,
       this.drawingService.onDrawChange.bind(this.drawingService)
     );
-    this.socket.on(`${this.roomId}/setadmin`, this.setAdmin.bind(this));
-    this.socket.on("disconnect", this.onRoomDisconnect.bind(this));
+
+    this.socket[mode](`${this.roomId}/setadmin`, this.setAdmin.bind(this));
+    this.socket[mode]("disconnect", this.onRoomDisconnect.bind(this));
   }
 
-  async onRoomLeave(roomId: string) {
+  async onRoomLeave() {
     this.handleRoomLeave();
-
-    this.socket.off(
-      `${roomId}/messages`,
-      this.messageService.onRoomMessage.bind(this.messageService)
-    );
-    this.socket.off(
-      `${roomId}/draw/change`,
-      this.drawingService.onDrawChange.bind(this.drawingService)
-    );
-    this.socket.off(`${roomId}/setadmin`, this.setAdmin.bind(this));
-    this.socket.off("disconnect", this.onRoomDisconnect.bind(this));
+    this.toggleHandlers("off");
   }
 
   private async deleteRoom(roomId: string) {
@@ -148,42 +148,44 @@ export class SocketRoomService implements ISocketRoomService {
     const rooms = await this.getRooms();
 
     const logStr = isDisconnected ? "disconnected from" : "leaving";
-    console.log(`${this.username} ${logStr} room ${rooms[this.roomId].name}`);
+    console.log(`${this.username} ${logStr} room ${rooms[this.roomId!].name}`);
 
-    this.socket.leave(this.roomId);
+    this.socket.leave(this.roomId!);
     this.socket.leave(`${this.userId}/inbox`);
 
     const isUserRoomAdmin =
-      Number(rooms[this.roomId].adminId) === Number(this.userId);
-    const roomIsNotEmpty = !!this.io.nsps["/"].adapter.rooms[this.roomId];
+      Number(rooms[this.roomId!].adminId) === Number(this.userId);
+    const roomIsNotEmpty = !!this.io.nsps["/"].adapter.rooms[this.roomId!];
 
     if (!roomIsNotEmpty) {
       await Promise.all([
-        this.deleteRoom(this.roomId),
-        redisDB.del(this.roomId),
+        this.deleteRoom(this.roomId!),
+        redisDB.del(this.roomId!),
         redisDB.del(`${this.roomId}/drawingid`)
       ]);
 
       const rooms = await this.getRooms();
       this.io.sockets.emit("rooms/get", rooms);
     } else if (isUserRoomAdmin) {
-      this.socket.broadcast.to(this.roomId).emit(`${this.roomId}/adminleaving`);
+      this.socket.broadcast
+        .to(this.roomId!)
+        .emit(`${this.roomId}/adminleaving`);
     }
 
     const roomUsers = roomIsNotEmpty
       ? Object.keys(
-          this.io.nsps["/"].adapter.rooms[this.roomId].sockets
+          this.io.nsps["/"].adapter.rooms[this.roomId!].sockets
         ).reduce(this.reduceRoomUsers.bind(this), {})
       : {};
 
-    this.io.to(this.roomId).emit(`${this.roomId}/users`, roomUsers);
+    this.io.to(this.roomId!).emit(`${this.roomId}/users`, roomUsers);
   }
 
   async onRoomDisconnect() {
     const rooms = await this.getRooms();
 
     console.log(
-      `${this.username} disconnected from ${rooms[this.roomId].name}`
+      `${this.username} disconnected from ${rooms[this.roomId!].name}`
     );
 
     this.handleRoomLeave(true);
@@ -249,7 +251,7 @@ export class SocketRoomService implements ISocketRoomService {
       {}
     );
 
-    currentlyOnline[this.username] && delete currentlyOnline[this.username];
+    currentlyOnline[this.username!] && delete currentlyOnline[this.username!];
 
     if (Object.keys(currentlyOnline).length) {
       await redisDB.hmset("users", currentlyOnline);

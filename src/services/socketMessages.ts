@@ -1,5 +1,4 @@
-import { injectable } from "inversify";
-import { Server } from "socket.io";
+import { Server, Socket } from "socket.io";
 
 import db from "./../models";
 
@@ -24,16 +23,16 @@ export interface ISocketMessageService {
   roomId: string | null;
   onGeneralMessage: (data: MessageObject) => void;
   onRoomMessage: (data: MessageObject) => void;
+  onMessageWrite(channel: string): void;
   onInboxMessage: (data: IInvitation) => void;
   getInboxData(userId: number): Promise<IInvitation[] | undefined>;
   getMessages: (roomId?: string) => Promise<Message[]>;
 }
 
-@injectable()
 export class SocketMessageService implements ISocketMessageService {
   roomId: string | null = null;
 
-  constructor(private io: Server) {}
+  constructor(private socket: Socket, private server: Server) {}
 
   async onGeneralMessage(data: MessageObject) {
     console.log("got a new general message");
@@ -43,7 +42,19 @@ export class SocketMessageService implements ISocketMessageService {
       isGeneral: true
     });
 
-    this.io.sockets.emit("general/messages", messages);
+    this.server.sockets.emit("general/messages", messages);
+  }
+
+  onMessageWrite(channel: string) {
+    const isGeneral = channel === "general"; // else roomId
+    const userId = this.socket.handshake.query.id;
+    console.log("received", channel);
+
+    isGeneral
+      ? this.socket.broadcast.emit("general/messages/write", userId)
+      : this.socket.broadcast
+          .to(channel)
+          .emit(`${channel}/messages/write`, userId);
   }
 
   async onRoomMessage(data: MessageObject) {
@@ -55,7 +66,7 @@ export class SocketMessageService implements ISocketMessageService {
       roomId: Number(this.roomId)
     });
 
-    this.io.to(this.roomId!).emit(`${this.roomId}/messages`, messages);
+    this.server.to(this.roomId!).emit(`${this.roomId}/messages`, messages);
   }
 
   async onInboxMessage(data: IInvitation) {
@@ -65,7 +76,7 @@ export class SocketMessageService implements ISocketMessageService {
 
     const inboxData = await this.updateInboxData(data);
 
-    this.io.to(`${receiverId}/inbox`).emit(`inbox/new`, inboxData);
+    this.server.to(`${receiverId}/inbox`).emit(`inbox/new`, inboxData);
   }
 
   async getMessages(roomId?: string) {

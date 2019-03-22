@@ -44,9 +44,7 @@ export class SocketInitializer {
       this.roomService = new SocketRoomService(
         this.io,
         this.socket,
-        this.username!,
-        this.userId!,
-        new SocketMessageService(this.io),
+        new SocketMessageService(socket, this.io),
         new SocketDrawingService(socket, this.io)
       );
 
@@ -62,30 +60,38 @@ export class SocketInitializer {
       throw new Error("initialization error");
     }
 
+    const { messageService } = this.roomService;
+
+    this.socket.on(
+      "general/messages/write",
+      messageService.onMessageWrite.bind(messageService)
+    );
+
     this.socket.on(
       "general/messages",
-      this.roomService.messageService.onGeneralMessage.bind(
-        this.roomService.messageService
-      )
+      messageService.onGeneralMessage.bind(messageService)
     );
+
     this.socket.on(
       `${this.userId}/inbox`,
-      this.roomService.messageService.onInboxMessage.bind(
-        this.roomService.messageService
-      )
+      messageService.onInboxMessage.bind(messageService)
     );
+
     this.socket.on(
       "room/join",
       this.roomService.onRoomJoin.bind(this.roomService)
     );
+
     this.socket.on(
       "room/leave",
       this.roomService.onRoomLeave.bind(this.roomService)
     );
+
     this.socket.on(
       "room/create",
       this.roomService.onRoomCreate.bind(this.roomService)
     );
+
     this.socket.on(
       "disconnect",
       this.roomService.onUserDisconnected.bind(this.roomService)

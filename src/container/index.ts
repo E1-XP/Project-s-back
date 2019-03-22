@@ -2,7 +2,6 @@ import { Container } from "inversify";
 import { TYPES } from "./types";
 
 import { Middlewares } from "./../middleware";
-
 import {
   ValidateUserService,
   IValidateUserService

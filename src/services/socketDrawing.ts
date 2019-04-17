@@ -91,8 +91,8 @@ export class SocketDrawingService implements ISocketDrawingService {
     redisDB.set(`${roomId}/drawingid`, String(drawingId));
 
     this.socket.broadcast.to(roomId).emit(`${roomId}/draw/change`, drawingId);
-    this.socket
-      .to(roomId)
+    this.server
+      .in(roomId)
       .emit(`${roomId}/draw/getexisting`, existingDrawingPoints);
   }
 

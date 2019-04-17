@@ -28,7 +28,7 @@ server.setConfig(app => {
   app.use(helmet());
   app.use(compression());
   app.use(cookieParser());
-  app.use(bodyParser.json());
+  app.use(bodyParser.json({ limit: "25mb" }));
   app.use(cors(corsConfig));
 
   app.use("/static", express.static(path.join(__dirname, "../public")));

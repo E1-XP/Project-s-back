@@ -17,7 +17,8 @@ export interface IDrawingController {
 export class DrawingController implements IDrawingController {
   @httpPost("/save")
   saveAsJPEG(req: Request, res: Response) {
-    const { image, drawingId } = req.body;
+    const { drawingId } = req.query;
+    const { image } = req.body;
 
     const dirPath = path.join(__dirname, `../../public/images`);
 

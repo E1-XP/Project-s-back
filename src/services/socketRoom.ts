@@ -69,14 +69,14 @@ export class SocketRoomService implements ISocketRoomService {
       drawingId
     );
 
-    console.log(`${this.username} entered room ${rooms[roomId].name}`);
-
     this.roomId = roomId;
     this.username = this.socket.handshake.query.user;
     this.userId = this.socket.handshake.query.id;
 
     this.drawingService.roomId = roomId;
     this.messageService.roomId = roomId;
+
+    console.log(`${this.username} entered room ${rooms[roomId].name}`);
 
     this.socket.join(roomId);
 

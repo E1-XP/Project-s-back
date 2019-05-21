@@ -1,10 +1,10 @@
-import { Socket, Server } from "socket.io";
+import { Socket, Server } from 'socket.io';
 
-import { DrawingPoint, DrawingPointsInstance } from "./../models/drawingpoints";
-import { RoomJoinData } from "./../services/socketRoom";
+import { DrawingPoint, DrawingPointsInstance } from './../models/drawingpoints';
+import { RoomJoinData } from './../services/socketRoom';
 
-import db from "./../models";
-import { redisDB } from "./../models/redis";
+import db from './../models';
+import { redisDB } from './../models/redis';
 
 export interface RoomDrawResetData {
   userId: number;
@@ -28,23 +28,23 @@ export class SocketDrawingService implements ISocketDrawingService {
   constructor(private socket: Socket, private server: Server) {}
 
   onDraw(point: DrawingPoint) {
-    if (!this.roomId) throw new Error("roomId not found");
+    if (!this.roomId) throw new Error('roomId not found');
 
     this.socket.broadcast.to(this.roomId).emit(`${this.roomId}/draw`, point);
     this.cachedPoints.push(point);
   }
 
   onMouseUp(data: string) {
-    if (!this.roomId) throw new Error("roomId not found");
+    if (!this.roomId) throw new Error('roomId not found');
 
     if (this.isGroupSameLengthAndOrderCheck(data, this.cachedPoints)) {
       // perform check on other users
       this.socket.broadcast.emit(`${this.roomId}/drawgroupcheck`, data);
     } else {
-      console.log("incorrect data");
+      console.log('incorrect data');
 
       const groupInfo = data
-        .split("|")
+        .split('|')
         .slice(0, 3)
         .map(Number);
 
@@ -53,15 +53,15 @@ export class SocketDrawingService implements ISocketDrawingService {
       this.socket.once(
         `${this.roomId}/resendcorrectdrawdata`,
         async correctGroup => {
-          if (!this.roomId) throw new Error("roomId not found");
-          if (!correctGroup.length) return;
+          if (!this.roomId) throw new Error('roomId not found');
+          if (!correctGroup || !correctGroup.length) return;
 
           await this.replaceDrawingPointsGroup(correctGroup);
 
           this.socket.broadcast
             .to(this.roomId)
             .emit(`${this.roomId}/sendcorrectgroup`, correctGroup);
-        }
+        },
       );
     }
 
@@ -70,13 +70,13 @@ export class SocketDrawingService implements ISocketDrawingService {
   }
 
   async onSendCorrectGroup(data: string) {
-    const [userIdStr, drawingIdStr, groupStr, tstamps] = data.split("|");
-    const test = tstamps.split(".").map(str => Number(str));
+    const [userIdStr, drawingIdStr, groupStr, tstamps] = data.split('|');
+    const test = tstamps.split('.').map(str => Number(str));
 
     const correctGroup = await this.getRoomDrawingPointsGroup(
       Number(userIdStr),
       Number(drawingIdStr),
-      Number(groupStr)
+      Number(groupStr),
     );
 
     if (correctGroup.length === test.length) {
@@ -88,7 +88,7 @@ export class SocketDrawingService implements ISocketDrawingService {
     const { roomId, drawingId } = data;
 
     const existingDrawingPoints = await this.getRoomDrawingPoints(drawingId);
-    redisDB.set(`${roomId}/drawingid`, String(drawingId));
+    redisDB.set(`${roomId}/drawingid`, drawingId.toString());
 
     this.socket.broadcast.to(roomId).emit(`${roomId}/draw/change`, drawingId);
     this.server
@@ -97,7 +97,7 @@ export class SocketDrawingService implements ISocketDrawingService {
   }
 
   onDrawReset(data: RoomDrawResetData) {
-    if (!this.roomId) throw new Error("roomId not found");
+    if (!this.roomId) throw new Error('roomId not found');
 
     const { drawingId, userId } = data;
 
@@ -107,10 +107,10 @@ export class SocketDrawingService implements ISocketDrawingService {
 
   private isGroupSameLengthAndOrderCheck(
     data: string,
-    cachedPoints: DrawingPoint[]
+    cachedPoints: DrawingPoint[],
   ) {
-    const [userIdStr, drawingIdStr, groupStrStr, tstamps] = data.split("|");
-    const test = tstamps.split(".").map(Number);
+    const [userIdStr, drawingIdStr, groupStrStr, tstamps] = data.split('|');
+    const test = tstamps.split('.').map(Number);
 
     if (!cachedPoints.length || cachedPoints.length !== test.length) {
       return false;
@@ -121,7 +121,7 @@ export class SocketDrawingService implements ISocketDrawingService {
 
   async getRoomDrawingPoints(drawingId: number) {
     const RoomDrawingPoints = await db.models.DrawingPoints.findAll({
-      where: { drawingId }
+      where: { drawingId },
     });
 
     return RoomDrawingPoints;
@@ -130,10 +130,10 @@ export class SocketDrawingService implements ISocketDrawingService {
   private async getRoomDrawingPointsGroup(
     userId: number,
     drawingId: number,
-    group: number
+    group: number,
   ) {
     const pointsGroup = await db.models.DrawingPoints.findAll({
-      where: { userId, drawingId, group }
+      where: { userId, drawingId, group },
     });
 
     return pointsGroup;

@@ -3,10 +3,10 @@ import {
   Model,
   DataTypes,
   Instance,
-  HasManyAddAssociationMixin
-} from "sequelize";
+  HasManyAddAssociationMixin,
+} from 'sequelize';
 
-import { UserType } from "./user";
+import { UserType } from './user';
 
 export interface IDrawing {
   id?: number;
@@ -24,18 +24,18 @@ export interface DrawingInstance extends Instance<IDrawing>, IDrawing {
 }
 
 const Drawing = function(sequelize: Sequelize, DataTypes: DataTypes) {
-  const _Drawing = sequelize.define<DrawingInstance, IDrawing>("drawing", {
+  const _Drawing = sequelize.define<DrawingInstance, IDrawing>('drawing', {
     name: DataTypes.STRING,
-    creatorId: DataTypes.INTEGER
+    creatorId: DataTypes.INTEGER,
   });
 
   _Drawing.associate = models => {
     _Drawing.belongsToMany(models.User, {
-      through: "usersindrawings",
-      foreignKey: "drawingId"
+      through: 'usersindrawings',
+      foreignKey: 'drawingId',
     });
     _Drawing.hasMany(models.DrawingPoints, {
-      foreignKey: "drawingId"
+      foreignKey: 'drawingId',
     });
   };
 

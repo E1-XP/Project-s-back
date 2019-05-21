@@ -1,9 +1,9 @@
-import { Server, Socket } from "socket.io";
+import { Server, Socket } from 'socket.io';
 
-import db from "./../models";
+import db from './../models';
 
-import { IInvitation } from "../models/invitation";
-import { Message } from "../models/message";
+import { IInvitation } from '../models/invitation';
+import { Message } from '../models/message';
 
 interface MessageObject {
   authorId: number;
@@ -35,23 +35,23 @@ export class SocketMessageService implements ISocketMessageService {
   constructor(private socket: Socket, private server: Server) {}
 
   async onGeneralMessage(data: MessageObject) {
-    console.log("got a new general message");
+    console.log('got a new general message');
 
     const messages = await this.sendMessage({
       ...data,
-      isGeneral: true
+      isGeneral: true,
     });
 
-    this.server.sockets.emit("general/messages", messages);
+    this.server.sockets.emit('general/messages', messages);
   }
 
   onMessageWrite(channel: string) {
-    const isGeneral = channel === "general"; // else roomId
+    const isGeneral = channel === 'general'; // else roomId
     const userId = this.socket.handshake.query.id;
-    console.log("received", channel);
+    console.log('received', channel);
 
     isGeneral
-      ? this.socket.broadcast.emit("general/messages/write", userId)
+      ? this.socket.broadcast.emit('general/messages/write', userId)
       : this.socket.broadcast
           .to(channel)
           .emit(`${channel}/messages/write`, userId);
@@ -63,7 +63,7 @@ export class SocketMessageService implements ISocketMessageService {
     const messages = await this.sendMessage({
       ...data,
       isGeneral: false,
-      roomId: Number(this.roomId)
+      roomId: Number(this.roomId),
     });
 
     this.server.to(this.roomId!).emit(`${this.roomId}/messages`, messages);
@@ -106,7 +106,7 @@ export class SocketMessageService implements ISocketMessageService {
     try {
       const messages = await db.models.Invitation.findAll({
         where: { receiverId: userId },
-        order: [["id", "DESC"]]
+        order: [['id', 'DESC']],
       });
 
       return messages;
@@ -123,7 +123,7 @@ export class SocketMessageService implements ISocketMessageService {
 
       const messages = await db.models.Invitation.findAll({
         where: { receiverId },
-        order: [["id", "DESC"]]
+        order: [['id', 'DESC']],
       });
 
       return messages;

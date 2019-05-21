@@ -1,12 +1,12 @@
-import { injectable } from "inversify";
+import { injectable } from 'inversify';
 import {
   Request,
   Response,
   NextFunction,
-  Errback
-} from "express-serve-static-core";
+  Errback,
+} from 'express-serve-static-core';
 
-import jwt, { VerifyCallback } from "jsonwebtoken";
+import jwt, { VerifyCallback } from 'jsonwebtoken';
 
 @injectable()
 export class Middlewares {
@@ -21,12 +21,12 @@ export class Middlewares {
             res.locals.userId = decoded.userId;
             next();
           } else {
-            res.status(401).json({ message: "Please log in first" });
+            res.status(401).json({ message: 'Please log in first' });
           }
         }
       ));
     } catch (err) {
-      res.status(401).json({ message: "Please log in first" });
+      res.status(401).json({ message: 'Please log in first' });
     }
   }
 }

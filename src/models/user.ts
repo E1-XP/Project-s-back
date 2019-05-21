@@ -1,5 +1,5 @@
-import bcrypt from "bcrypt";
-import { Sequelize, DataTypes, Instance } from "sequelize";
+import bcrypt from 'bcrypt';
+import { Sequelize, DataTypes, Instance } from 'sequelize';
 
 export interface UserType {
   id?: string;
@@ -14,23 +14,23 @@ export interface UserType {
 export interface UserInstance extends Instance<UserType>, UserType {}
 
 const User = function(sequelize: Sequelize, DataTypes: DataTypes) {
-  const _User = sequelize.define<UserInstance, UserType>("user", {
+  const _User = sequelize.define<UserInstance, UserType>('user', {
     username: {
-      type: DataTypes.STRING
+      type: DataTypes.STRING,
     },
     email: {
       type: DataTypes.STRING,
-      unique: true
+      unique: true,
     },
     password: {
-      type: DataTypes.STRING
-    }
+      type: DataTypes.STRING,
+    },
   });
 
   _User.associate = models => {
     _User.belongsToMany(models.Drawing, {
-      through: "usersindrawings",
-      foreignKey: "userId"
+      through: 'usersindrawings',
+      foreignKey: 'userId',
     });
   };
 

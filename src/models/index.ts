@@ -1,13 +1,13 @@
-import Sequelize, { SequelizeStatic, Sequelize as ISequelize } from "sequelize";
+import Sequelize, { SequelizeStatic, Sequelize as ISequelize } from 'sequelize';
 
-import { IDrawing, DrawingInstance } from "./drawing";
-import { UserInstance, UserType } from "./user";
-import { DrawingPoint, DrawingPointsInstance } from "./drawingpoints";
-import { Room, RoomInstance } from "./room";
-import { Message, MessageInstance } from "./message";
-import { IInvitation, InvitationInstance } from "./invitation";
+import { IDrawing, DrawingInstance } from './drawing';
+import { UserInstance, UserType } from './user';
+import { DrawingPoint, DrawingPointsInstance } from './drawingpoints';
+import { Room, RoomInstance } from './room';
+import { Message, MessageInstance } from './message';
+import { IInvitation, InvitationInstance } from './invitation';
 
-import DBConfig from "./../config/db";
+import DBConfig from './../config/db';
 
 export const sequelize = new Sequelize(
   DBConfig.name!,
@@ -15,8 +15,8 @@ export const sequelize = new Sequelize(
   DBConfig.password!,
   {
     host: DBConfig.host!,
-    dialect: "mysql"
-  }
+    dialect: 'mysql',
+  },
 );
 
 interface Models {
@@ -37,19 +37,19 @@ interface DB {
 
 const db: DB = {
   models: {
-    User: sequelize.import("./user"),
-    Drawing: sequelize.import("./drawing"),
-    DrawingPoints: sequelize.import("./drawingpoints"),
-    Room: sequelize.import("./room"),
-    Message: sequelize.import("./message"),
-    Invitation: sequelize.import("./invitation")
+    User: sequelize.import('./user'),
+    Drawing: sequelize.import('./drawing'),
+    DrawingPoints: sequelize.import('./drawingpoints'),
+    Room: sequelize.import('./room'),
+    Message: sequelize.import('./message'),
+    Invitation: sequelize.import('./invitation'),
   },
   Sequelize,
-  sequelize
+  sequelize,
 };
 
 Object.keys(db.models).forEach(key => {
-  if ("associate" in db.models[key]) {
+  if ('associate' in db.models[key]) {
     db.models[key].associate(db.models);
   }
 });

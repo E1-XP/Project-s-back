@@ -1,5 +1,5 @@
-import { Sequelize, DataTypes, Model, Instance } from "sequelize";
-import { UserType } from "./user";
+import { Sequelize, DataTypes, Model, Instance } from 'sequelize';
+import { UserType } from './user';
 
 export interface Message {
   id?: number;
@@ -19,23 +19,23 @@ export interface MessageInstance extends Instance<Message>, Message {}
 
 const Message = function(sequelize: Sequelize, DataTypes: DataTypes) {
   const _Message = sequelize.define<MessageModel, MessageInstance>(
-    "message",
+    'message',
     {
       authorId: DataTypes.INTEGER,
       author: DataTypes.STRING,
       message: DataTypes.STRING,
       roomId: DataTypes.BIGINT,
-      isGeneral: DataTypes.BOOLEAN
+      isGeneral: DataTypes.BOOLEAN,
     },
     {
-      charset: "utf8mb4",
-      collate: "utf8mb4_unicode_ci"
-    }
+      charset: 'utf8mb4',
+      collate: 'utf8mb4_unicode_ci',
+    },
   );
 
   _Message.associate = models => {
     _Message.hasOne(models.User, {
-      foreignKey: "id"
+      foreignKey: 'id',
     });
   };
 

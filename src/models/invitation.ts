@@ -1,4 +1,4 @@
-import { Sequelize, Model, DataTypes, Instance } from "sequelize";
+import { Sequelize, Model, DataTypes, Instance } from 'sequelize';
 
 export interface IInvitation {
   id?: number;
@@ -19,13 +19,13 @@ export interface InvitationInstance
 
 const Invitation = function(sequelize: Sequelize, DataTypes: DataTypes) {
   const _Invitation = sequelize.define<InvitationInstance, IInvitation>(
-    "invitation",
+    'invitation',
     {
       roomId: DataTypes.BIGINT,
       senderId: DataTypes.INTEGER,
       senderName: DataTypes.STRING,
-      receiverId: DataTypes.INTEGER
-    }
+      receiverId: DataTypes.INTEGER,
+    },
   );
 
   return _Invitation;

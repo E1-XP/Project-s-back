@@ -11,6 +11,10 @@
   },
   "author": "",
   "license": "ISC",
+  "prettier": {
+    "singleQuote": true,
+    "trailingComma": "all"
+  },
   "dependencies": {
     "async-redis": "^1.1.4",
     "bcrypt": "^2.0.1",

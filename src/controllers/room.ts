@@ -1,10 +1,10 @@
-import { controller, interfaces, httpPost } from "inversify-express-utils";
-import { Request, Response } from "express-serve-static-core";
+import { controller, interfaces, httpPost } from 'inversify-express-utils';
+import { Request, Response } from 'express-serve-static-core';
 
-import { container } from "./../container";
-import { TYPES } from "./../container/types";
+import { container } from './../container';
+import { TYPES } from './../container/types';
 
-import db from "../models";
+import db from '../models';
 
 export interface SetAdminData {
   userId: number;
@@ -16,11 +16,11 @@ export interface RoomController {
 }
 
 @controller(
-  "/rooms/:roomid",
-  container.get<any>(TYPES.Middlewares).authRequired
+  '/rooms/:roomid',
+  container.get<any>(TYPES.Middlewares).authRequired,
 )
 export class RoomController implements RoomController {
-  @httpPost("/checkpassword")
+  @httpPost('/checkpassword')
   async checkPassword(req: Request, res: Response) {
     const { roomid } = req.params;
     const { password } = req.body;
@@ -28,9 +28,9 @@ export class RoomController implements RoomController {
     try {
       const room = await db.models.Room.findOne({ where: { roomId: roomid } });
 
-      room && room.getDataValue("password") === password
-        ? res.status(200).send({ message: "success" })
-        : res.status(401).send({ message: "incorrect password/error" });
+      room && room.getDataValue('password') === password
+        ? res.status(200).send({ message: 'success' })
+        : res.status(401).send({ message: 'incorrect password/error' });
     } catch (err) {
       console.log(err);
     }

@@ -1,11 +1,11 @@
-import { Container } from "inversify";
-import { TYPES } from "./types";
+import { Container } from 'inversify';
+import { TYPES } from './types';
 
-import { Middlewares } from "./../middleware";
+import { Middlewares } from './../middleware';
 import {
   ValidateUserService,
-  IValidateUserService
-} from "./../services/validateUser";
+  IValidateUserService,
+} from './../services/validateUser';
 
 export const container = new Container();
 

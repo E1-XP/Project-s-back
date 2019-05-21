@@ -151,7 +151,6 @@ export class SocketRoomService implements ISocketRoomService {
     console.log(`${this.username} ${logStr} room ${rooms[this.roomId!].name}`);
 
     this.socket.leave(this.roomId!);
-    this.socket.leave(`${this.userId}/inbox`);
 
     const isUserRoomAdmin =
       Number(rooms[this.roomId!].adminId) === Number(this.userId);

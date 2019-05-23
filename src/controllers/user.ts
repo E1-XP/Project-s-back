@@ -11,10 +11,7 @@ import db from './../models';
 
 import { Request, Response } from 'express-serve-static-core';
 
-@controller(
-  '/users/:userid',
-  container.get<any>(TYPES.Middlewares).authRequired,
-)
+@controller('/users/:userid', TYPES.AuthMiddleware)
 export class UserController implements interfaces.Controller {
   @httpGet('/')
   async getUser(req: Request, res: Response) {
@@ -67,7 +64,7 @@ export class UserController implements interfaces.Controller {
 
       drawing.addUser(userId);
 
-      //return user drawings
+      // return user drawings
       const dbResp: any = await db.models.User.findAll({
         include: [{ model: db.models.Drawing }],
         where: { id: userId },

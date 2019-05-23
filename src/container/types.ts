@@ -1,4 +1,5 @@
 export const TYPES = {
-  Middlewares: Symbol.for('Middlewares'),
+  AuthMiddleware: Symbol.for('AuthMiddleware'),
   ValidateUserService: Symbol.for('ValidateUserService'),
+  TokenService: Symbol.for('TokenService'),
 };

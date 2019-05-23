@@ -1,7 +1,6 @@
 import { controller, interfaces, httpPost } from 'inversify-express-utils';
 import { Request, Response } from 'express-serve-static-core';
 
-import { container } from './../container';
 import { TYPES } from './../container/types';
 
 import db from '../models';
@@ -15,10 +14,7 @@ export interface RoomController {
   checkPassword(req: Request, res: Response): Promise<void>;
 }
 
-@controller(
-  '/rooms/:roomid',
-  container.get<any>(TYPES.Middlewares).authRequired,
-)
+@controller('/rooms/:roomid', TYPES.AuthMiddleware)
 export class RoomController implements RoomController {
   @httpPost('/checkpassword')
   async checkPassword(req: Request, res: Response) {

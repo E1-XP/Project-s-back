@@ -3,7 +3,6 @@ import path from 'path';
 import { Request, Response } from 'express-serve-static-core';
 import { controller, httpPost } from 'inversify-express-utils';
 
-import { container } from './../container';
 import { TYPES } from './../container/types';
 
 import db from './../models';
@@ -13,10 +12,7 @@ export interface IDrawingController {
   saveAsJPEG: (req: Request, res: Response) => void;
 }
 
-@controller(
-  '/drawings/:drawingId',
-  container.get<any>(TYPES.Middlewares).authRequired,
-)
+@controller('/drawings/:drawingId', TYPES.AuthMiddleware)
 export class DrawingController implements IDrawingController {
   @httpPost('/addowner')
   async addOwner(req: Request, res: Response) {

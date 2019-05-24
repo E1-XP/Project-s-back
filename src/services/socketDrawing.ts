@@ -1,10 +1,16 @@
 import { Socket, Server } from 'socket.io';
 
+import { container } from './../container';
+import { TYPES } from './../container/types';
+
 import { DrawingPoint, DrawingPointsInstance } from './../models/drawingpoints';
 import { RoomJoinData } from './../services/socketRoom';
+import { IErrorMiddleware } from './../middleware/error';
 
 import db from './../models';
 import { redisDB } from './../models/redis';
+
+const { catchAsync } = container.get<IErrorMiddleware>(TYPES.ErrorMiddleware);
 
 export interface RoomDrawResetData {
   userId: number;
@@ -69,6 +75,7 @@ export class SocketDrawingService implements ISocketDrawingService {
     this.cachedPoints = [];
   }
 
+  @catchAsync
   async onSendCorrectGroup(data: string) {
     const [userIdStr, drawingIdStr, groupStr, tstamps] = data.split('|');
     const test = tstamps.split('.').map(str => Number(str));
@@ -84,6 +91,7 @@ export class SocketDrawingService implements ISocketDrawingService {
     }
   }
 
+  @catchAsync
   async onDrawChange(data: RoomJoinData) {
     const { roomId, drawingId } = data;
 
@@ -119,6 +127,7 @@ export class SocketDrawingService implements ISocketDrawingService {
     return test.every((tstamp, i) => tstamp === cachedPoints[i].date);
   }
 
+  @catchAsync
   async getRoomDrawingPoints(drawingId: number) {
     const RoomDrawingPoints = await db.models.DrawingPoints.findAll({
       where: { drawingId },

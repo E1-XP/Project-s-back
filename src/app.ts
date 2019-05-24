@@ -2,6 +2,7 @@ import 'reflect-metadata';
 
 import { InversifyExpressServer } from 'inversify-express-utils';
 import { container } from './container';
+import { TYPES } from './container/types';
 
 import express from 'express';
 import path from 'path';
@@ -13,6 +14,8 @@ import cors from 'cors';
 import compression from 'compression';
 
 import './controllers';
+
+import { IErrorMiddleware } from './middleware/error';
 
 import config from './config';
 
@@ -33,5 +36,9 @@ server.setConfig(app => {
 
   app.use('/static', express.static(path.join(__dirname, '../public')));
 });
+
+server.setErrorConfig(app =>
+  app.use(container.get<IErrorMiddleware>(TYPES.ErrorMiddleware).handler),
+);
 
 export const app = server.build();

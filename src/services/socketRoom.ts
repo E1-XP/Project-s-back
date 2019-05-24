@@ -1,9 +1,15 @@
 import { Socket, Server } from 'socket.io';
 
+import { container } from './../container';
+import { TYPES } from './../container/types';
+
 import { Room, RoomInstance } from '../models/room';
 
 import { ISocketMessageService } from './../services/socketMessages';
 import { ISocketDrawingService } from './../services/socketDrawing';
+import { IErrorMiddleware } from './../middleware/error';
+
+const { catchAsync } = container.get<IErrorMiddleware>(TYPES.ErrorMiddleware);
 
 import db from './../models';
 import { redisDB } from './../models/redis';
@@ -40,7 +46,6 @@ export interface ISocketRoomService {
   onRoomLeave(): void;
   onRoomDisconnect(): void;
   onRoomCreate(data: RoomCreateData): void;
-  onUserDisconnected(): void;
   getRooms(): Promise<Rooms>;
 }
 
@@ -56,6 +61,7 @@ export class SocketRoomService implements ISocketRoomService {
     public drawingService: ISocketDrawingService,
   ) {}
 
+  @catchAsync
   async onRoomJoin(data: RoomJoinData) {
     const { roomId } = data;
 
@@ -144,6 +150,7 @@ export class SocketRoomService implements ISocketRoomService {
     });
   }
 
+  @catchAsync
   private async handleRoomLeave(isDisconnected = false) {
     const rooms = await this.getRooms();
 
@@ -164,6 +171,7 @@ export class SocketRoomService implements ISocketRoomService {
       ]);
 
       const rooms = await this.getRooms();
+
       this.io.sockets.emit('rooms/get', rooms);
     } else if (isUserRoomAdmin) {
       this.socket.broadcast
@@ -180,6 +188,7 @@ export class SocketRoomService implements ISocketRoomService {
     this.io.to(this.roomId!).emit(`${this.roomId}/users`, roomUsers);
   }
 
+  @catchAsync
   async onRoomDisconnect() {
     const rooms = await this.getRooms();
 
@@ -203,6 +212,7 @@ export class SocketRoomService implements ISocketRoomService {
     this.io.to(roomId).emit('rooms/get', rooms);
   }
 
+  @catchAsync
   async onRoomCreate(data: RoomCreateData) {
     const { name, adminId, isPrivate, password, drawingId } = data;
 
@@ -242,25 +252,7 @@ export class SocketRoomService implements ISocketRoomService {
     }, {});
   }
 
-  async onUserDisconnected() {
-    console.log(`user disconnected ${this.username}`);
-
-    const currentlyOnline: any = Object.keys(this.io.sockets.connected).reduce(
-      this.reduceConnected.bind(this),
-      {},
-    );
-
-    currentlyOnline[this.username!] && delete currentlyOnline[this.username!];
-
-    if (Object.keys(currentlyOnline).length) {
-      await redisDB.hmset('users', currentlyOnline);
-      this.io.sockets.emit('general/users', currentlyOnline);
-    } else {
-      await redisDB.del('users');
-      this.io.sockets.emit('general/users', {});
-    }
-  }
-
+  @catchAsync
   async getRooms() {
     const allRooms = <Room[]>await db.models.Room.findAll({});
 
@@ -275,12 +267,6 @@ export class SocketRoomService implements ISocketRoomService {
       acc[itm.roomId] = itm;
       return acc;
     }, {});
-  }
-
-  private reduceConnected(acc: any, itm: string) {
-    const src = this.io.sockets.connected[itm].handshake.query;
-    acc[src.id] = src.user;
-    return acc;
   }
 
   private reduceRoomUsers(acc: any, itm: string) {

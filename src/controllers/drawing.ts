@@ -1,11 +1,17 @@
 import fs from 'fs';
 import path from 'path';
-import { Request, Response } from 'express-serve-static-core';
+import { Request, Response } from 'express';
 import { controller, httpPost } from 'inversify-express-utils';
 
+import { container } from './../container';
 import { TYPES } from './../container/types';
 
 import db from './../models';
+
+import { IErrorMiddleware } from './../middleware/error';
+const { catchAsyncHTTP } = container.get<IErrorMiddleware>(
+  TYPES.ErrorMiddleware,
+);
 
 export interface IDrawingController {
   addOwner: (req: Request, res: Response) => void;
@@ -15,28 +21,24 @@ export interface IDrawingController {
 @controller('/drawings/:drawingId', TYPES.AuthMiddleware)
 export class DrawingController implements IDrawingController {
   @httpPost('/addowner')
+  @catchAsyncHTTP
   async addOwner(req: Request, res: Response) {
     const { drawingId } = req.params;
     const { userId } = req.body;
 
-    try {
-      const drawing = await db.models.Drawing.findById(drawingId);
-      if (!drawing) throw new Error('drawing is undefined');
+    const drawing = await db.models.Drawing.findById(drawingId);
+    if (!drawing) throw new Error('drawing is undefined');
 
-      await drawing.addUser(userId.toString());
+    await drawing.addUser(userId.toString());
 
-      const dbResp: any = await db.models.User.find({
-        include: [{ model: db.models.Drawing }],
-        where: { id: userId },
-      });
+    const dbResp: any = await db.models.User.find({
+      include: [{ model: db.models.Drawing }],
+      where: { id: userId },
+    });
 
-      const drawings = dbResp!.get({ plain: true }).drawings;
+    const drawings = dbResp!.get({ plain: true }).drawings;
 
-      res.status(200).json(drawings);
-    } catch (err) {
-      console.log(err);
-      res.status(500).json({ message: 'internal server error' });
-    }
+    res.status(200).json(drawings);
   }
 
   @httpPost('/save')
@@ -55,6 +57,7 @@ export class DrawingController implements IDrawingController {
     fs.writeFileSync(`${dirPath}/${drawingId}.jpg`, buff);
 
     console.log('file saved');
+
     res.status(200).json({ message: 'success' });
   }
 }

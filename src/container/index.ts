@@ -2,6 +2,7 @@ import { Container } from 'inversify';
 import { TYPES } from './types';
 
 import { AuthMiddleware, IAuthMiddleware } from '../middleware/auth';
+import { ErrorMiddleware, IErrorMiddleware } from '../middleware/error';
 import {
   ValidateUserService,
   IValidateUserService,
@@ -13,6 +14,11 @@ export const container = new Container();
 container
   .bind<IAuthMiddleware>(TYPES.AuthMiddleware)
   .to(AuthMiddleware)
+  .inSingletonScope();
+
+container
+  .bind<IErrorMiddleware>(TYPES.ErrorMiddleware)
+  .to(ErrorMiddleware)
   .inSingletonScope();
 
 container

@@ -1,9 +1,15 @@
 import { controller, interfaces, httpPost } from 'inversify-express-utils';
-import { Request, Response } from 'express-serve-static-core';
+import { Request, Response } from 'express';
 
+import { container } from './../container';
 import { TYPES } from './../container/types';
 
 import db from '../models';
+
+import { IErrorMiddleware } from './../middleware/error';
+const { catchAsyncHTTP } = container.get<IErrorMiddleware>(
+  TYPES.ErrorMiddleware,
+);
 
 export interface SetAdminData {
   userId: number;
@@ -17,18 +23,15 @@ export interface RoomController {
 @controller('/rooms/:roomid', TYPES.AuthMiddleware)
 export class RoomController implements RoomController {
   @httpPost('/checkpassword')
+  @catchAsyncHTTP
   async checkPassword(req: Request, res: Response) {
     const { roomid } = req.params;
     const { password } = req.body;
 
-    try {
-      const room = await db.models.Room.findOne({ where: { roomId: roomid } });
+    const room = await db.models.Room.findOne({ where: { roomId: roomid } });
 
-      room && room.getDataValue('password') === password
-        ? res.status(200).send({ message: 'success' })
-        : res.status(401).send({ message: 'incorrect password/error' });
-    } catch (err) {
-      console.log(err);
-    }
+    if (room && room.getDataValue('password') === password) {
+      res.status(200).send({ message: 'success' });
+    } else res.status(401).send({ message: 'incorrect password/error' });
   }
 }

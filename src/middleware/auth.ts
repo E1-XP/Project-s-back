@@ -21,7 +21,7 @@ export class AuthMiddleware extends BaseMiddleware implements IAuthMiddleware {
       const accessToken = req.cookies.accesstoken;
 
       if (!accessToken) {
-        res.status(401).json({ message: 'Please log in first' });
+        return res.status(401).json({ message: 'Please log in first' });
       }
 
       const payload = jwt.verify(
@@ -32,8 +32,6 @@ export class AuthMiddleware extends BaseMiddleware implements IAuthMiddleware {
       res.locals.userId = payload.userId;
       next();
     } catch (err) {
-      console.log(err);
-
       const isTokenIssued = await this.issueNewAccessToken(req, res);
       if (isTokenIssued) return next();
 
@@ -62,7 +60,6 @@ export class AuthMiddleware extends BaseMiddleware implements IAuthMiddleware {
 
       return true;
     } catch (err) {
-      console.log(err);
       return false;
     }
   }

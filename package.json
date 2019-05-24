@@ -11,6 +11,10 @@
   },
   "author": "",
   "license": "ISC",
+  "prettier": {
+    "singleQuote": true,
+    "trailingComma": "all"
+  },
   "dependencies": {
     "async-redis": "^1.1.4",
     "bcrypt": "^2.0.1",
@@ -50,6 +54,7 @@
     "nodemon": "^1.17.5",
     "ts-node": "^7.0.0",
     "tslint-config-airbnb": "^5.11.1",
-    "typescript": "^2.9.2"
+    "tslint-config-prettier": "^1.18.0",
+    "typescript": "^3.4.5"
   }
 }

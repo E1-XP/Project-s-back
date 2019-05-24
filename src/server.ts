@@ -1,11 +1,11 @@
-import * as dotenv from "dotenv";
+import * as dotenv from 'dotenv';
 dotenv.config();
 
-import { app } from "./app";
-import db from "./models";
-import { redisDB } from "./models/redis";
+import { app } from './app';
+import db from './models';
+import { redisDB } from './models/redis';
 
-import { SocketInitializer } from "./socket";
+import { SocketInitializer } from './socket';
 
 const PORT = +process.env.PORT! || 3001;
 

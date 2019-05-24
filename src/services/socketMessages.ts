@@ -1,9 +1,15 @@
-import { Server, Socket } from "socket.io";
+import { Server, Socket } from 'socket.io';
 
-import db from "./../models";
+import { container } from './../container';
+import { TYPES } from './../container/types';
 
-import { IInvitation } from "../models/invitation";
-import { Message } from "../models/message";
+import { IInvitation } from '../models/invitation';
+import { Message } from '../models/message';
+import { IErrorMiddleware } from './../middleware/error';
+
+import db from './../models';
+
+const { catchAsync } = container.get<IErrorMiddleware>(TYPES.ErrorMiddleware);
 
 interface MessageObject {
   authorId: number;
@@ -34,41 +40,43 @@ export class SocketMessageService implements ISocketMessageService {
 
   constructor(private socket: Socket, private server: Server) {}
 
+  @catchAsync
   async onGeneralMessage(data: MessageObject) {
-    console.log("got a new general message");
+    console.log('got a new general message');
 
     const messages = await this.sendMessage({
       ...data,
-      isGeneral: true
+      isGeneral: true,
     });
 
-    this.server.sockets.emit("general/messages", messages);
+    this.server.sockets.emit('general/messages', messages);
   }
 
   onMessageWrite(channel: string) {
-    const isGeneral = channel === "general"; // else roomId
+    const isGeneral = channel === 'general'; // else roomId
     const userId = this.socket.handshake.query.id;
-    console.log("received", channel);
 
     isGeneral
-      ? this.socket.broadcast.emit("general/messages/write", userId)
+      ? this.socket.broadcast.emit('general/messages/write', userId)
       : this.socket.broadcast
           .to(channel)
           .emit(`${channel}/messages/write`, userId);
   }
 
+  @catchAsync
   async onRoomMessage(data: MessageObject) {
     console.log(`message posted in ${this.roomId}`);
 
     const messages = await this.sendMessage({
       ...data,
       isGeneral: false,
-      roomId: Number(this.roomId)
+      roomId: Number(this.roomId),
     });
 
     this.server.to(this.roomId!).emit(`${this.roomId}/messages`, messages);
   }
 
+  @catchAsync
   async onInboxMessage(data: IInvitation) {
     const { receiverId } = data;
 
@@ -79,6 +87,7 @@ export class SocketMessageService implements ISocketMessageService {
     this.server.to(`${receiverId}/inbox`).emit(`inbox/new`, inboxData);
   }
 
+  @catchAsync
   async getMessages(roomId?: string) {
     const isMessageGeneral = !roomId;
 
@@ -89,6 +98,7 @@ export class SocketMessageService implements ISocketMessageService {
     return messages;
   }
 
+  @catchAsync
   async sendMessage(data: sendMessageData) {
     const { roomId } = data;
     const isMessageGeneral = data.isGeneral;
@@ -102,33 +112,27 @@ export class SocketMessageService implements ISocketMessageService {
     return messages;
   }
 
+  @catchAsync
   async getInboxData(userId: number) {
-    try {
-      const messages = await db.models.Invitation.findAll({
-        where: { receiverId: userId },
-        order: [["id", "DESC"]]
-      });
+    const messages = await db.models.Invitation.findAll({
+      where: { receiverId: userId },
+      order: [['id', 'DESC']],
+    });
 
-      return messages;
-    } catch (err) {
-      console.log(err);
-    }
+    return messages;
   }
 
+  @catchAsync
   async updateInboxData(data: IInvitation) {
-    try {
-      const { receiverId } = data;
+    const { receiverId } = data;
 
-      const message = await db.models.Invitation.create(<any>data);
+    await db.models.Invitation.create(<any>data);
 
-      const messages = await db.models.Invitation.findAll({
-        where: { receiverId },
-        order: [["id", "DESC"]]
-      });
+    const messages = await db.models.Invitation.findAll({
+      where: { receiverId },
+      order: [['id', 'DESC']],
+    });
 
-      return messages;
-    } catch (err) {
-      console.log(err);
-    }
+    return messages;
   }
 }

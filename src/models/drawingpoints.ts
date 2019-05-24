@@ -1,4 +1,4 @@
-import { Sequelize, DataTypes, Model, Instance } from "sequelize";
+import { Sequelize, DataTypes, Model, Instance } from 'sequelize';
 
 export interface DrawingPoint {
   x: number;
@@ -24,7 +24,7 @@ export interface DrawingPointsInstance
 
 const DrawingPoints = function(sequelize: Sequelize, DataTypes: DataTypes) {
   const _DrawingPoints = sequelize.define<DrawingPointsInstance, DrawingPoint>(
-    "drawingpoints",
+    'drawingpoints',
     {
       x: DataTypes.INTEGER,
       y: DataTypes.INTEGER,
@@ -33,8 +33,8 @@ const DrawingPoints = function(sequelize: Sequelize, DataTypes: DataTypes) {
       date: DataTypes.BIGINT,
       group: DataTypes.INTEGER,
       userId: DataTypes.INTEGER,
-      drawingId: DataTypes.INTEGER
-    }
+      drawingId: DataTypes.INTEGER,
+    },
   );
 
   return _DrawingPoints;

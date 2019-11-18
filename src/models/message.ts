@@ -20,7 +20,7 @@ export interface MessageInstance extends Instance<Message>, Message {}
 const Message = function(sequelize: Sequelize, DataTypes: DataTypes) {
   const _Message = sequelize.define<MessageModel, MessageInstance>(
     'message',
-    {
+    <any>{
       authorId: DataTypes.INTEGER,
       author: DataTypes.STRING,
       message: DataTypes.STRING,
@@ -34,7 +34,7 @@ const Message = function(sequelize: Sequelize, DataTypes: DataTypes) {
   );
 
   _Message.associate = models => {
-    _Message.hasOne(models.User, {
+    _Message.belongsTo(models.User, {
       foreignKey: 'id',
     });
   };

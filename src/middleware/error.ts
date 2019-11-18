@@ -29,6 +29,7 @@ export class ErrorMiddleware implements IErrorMiddleware {
     console.log('WORKS!');
     console.log(err);
 
+    // @ts-ignore
     if (canSendResponse) {
       res.status(500).json({ message: 'internal server error' });
     }

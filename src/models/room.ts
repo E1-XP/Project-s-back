@@ -18,7 +18,7 @@ export interface RoomModel extends Model<RoomInstance, Room> {}
 export interface RoomInstance extends Instance<Room>, Room {}
 
 const Room = function(sequelize: Sequelize, DataTypes: DataTypes) {
-  const _Room = sequelize.define<RoomModel, RoomInstance>('room', {
+  const _Room = sequelize.define<RoomModel, RoomInstance>('room', <any>{
     name: DataTypes.STRING,
     roomId: DataTypes.BIGINT,
     adminId: DataTypes.INTEGER,

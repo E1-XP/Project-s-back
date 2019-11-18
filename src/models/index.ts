@@ -15,7 +15,9 @@ export const sequelize = new Sequelize(
   DBConfig.password!,
   {
     host: DBConfig.host!,
+    port: DBConfig.port!,
     dialect: 'mysql',
+    operatorsAliases: false,
   },
 );
 

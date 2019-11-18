@@ -1,4 +1,5 @@
 import { Socket, Server } from 'socket.io';
+import { Op } from 'sequelize';
 
 import { container } from './../container';
 import { TYPES } from './../container/types';
@@ -151,7 +152,9 @@ export class SocketDrawingService implements ISocketDrawingService {
   private async replaceDrawingPointsGroup(correctGroup: DrawingPoint[]) {
     const idArr = correctGroup.map(p => p.id);
 
-    await db.models.DrawingPoints.destroy({ where: { id: { $in: idArr } } });
+    await db.models.DrawingPoints.destroy({
+      where: { id: { [Op.in]: idArr } },
+    });
     await db.models.DrawingPoints.bulkCreate(correctGroup);
   }
 

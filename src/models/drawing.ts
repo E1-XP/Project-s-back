@@ -33,6 +33,7 @@ const Drawing = function(sequelize: Sequelize, DataTypes: DataTypes) {
     _Drawing.belongsToMany(models.User, {
       through: 'usersindrawings',
       foreignKey: 'drawingId',
+      otherKey: 'userId',
     });
     _Drawing.hasMany(models.DrawingPoints, {
       foreignKey: 'drawingId',

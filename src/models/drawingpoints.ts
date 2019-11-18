@@ -37,6 +37,10 @@ const DrawingPoints = function(sequelize: Sequelize, DataTypes: DataTypes) {
     },
   );
 
+  _DrawingPoints.associate = models => {
+    _DrawingPoints.belongsTo(models.Drawing);
+  };
+
   return _DrawingPoints;
 };
 

@@ -31,6 +31,10 @@ const User = function(sequelize: Sequelize, DataTypes: DataTypes) {
     _User.belongsToMany(models.Drawing, {
       through: 'usersindrawings',
       foreignKey: 'userId',
+      otherKey:'drawingId'
+    });
+    _User.hasMany(models.Message, {
+      foreignKey: 'authorId',
     });
   };
 

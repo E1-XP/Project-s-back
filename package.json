@@ -2,7 +2,7 @@
   "name": "project-s-back",
   "version": "1.0.0",
   "description": "",
-  "main": "./build/app.js",
+  "main": "./build/server.js",
   "scripts": {
     "start": "nodemon --watch src/**/*.ts --exec ts-node src/server.ts",
     "test": "echo \"Error: no test specified\" && exit 1",

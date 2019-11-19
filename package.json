@@ -2,13 +2,14 @@
   "name": "project-s-back",
   "version": "1.0.0",
   "description": "",
-  "main": "./build/app.js",
+  "main": "./build/server.js",
   "scripts": {
     "start": "nodemon --watch src/**/*.ts --exec ts-node src/server.ts",
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
     "postinstall": "npm run build"
   },
+  "heroku-run-build-script": true,
   "author": "",
   "license": "ISC",
   "prettier": {
@@ -20,7 +21,7 @@
   },
   "dependencies": {
     "async-redis": "^1.1.7",
-    "bcrypt": "^2.0.1",
+    "bcryptjs": "^2.4.3",
     "body-parser": "^1.19.0",
     "compression": "^1.7.4",
     "cookie-parser": "^1.4.4",
@@ -31,6 +32,7 @@
     "inversify": "^5.0.1",
     "inversify-express-utils": "^6.3.2",
     "jsonwebtoken": "^8.5.1",
+    "morgan": "^1.9.1",
     "mysql2": "^1.7.0",
     "redis": "^2.8.0",
     "reflect-metadata": "^0.1.13",
@@ -38,7 +40,7 @@
     "socket.io": "^2.3.0"
   },
   "devDependencies": {
-    "@types/bcrypt": "^2.0.0",
+    "@types/bcryptjs": "^2.4.2",
     "@types/body-parser": "^1.17.1",
     "@types/client-sessions": "^0.8.0",
     "@types/compression": "0.0.36",
@@ -50,12 +52,12 @@
     "@types/jsonwebtoken": "^8.3.5",
     "@types/morgan": "^1.7.37",
     "@types/mysql2": "github:types/npm-mysql2",
+    "@types/node": "^12.12.9",
     "@types/redis": "^2.8.14",
     "@types/sequelize": "^4.28.6",
     "@types/socket.io": "^1.4.40",
-    "morgan": "^1.9.1",
     "nodemon": "^1.19.4",
-    "ts-node": "^7.0.1",
+    "ts-node": "^8.5.2",
     "tslint-config-airbnb": "^5.11.2",
     "tslint-config-prettier": "^1.18.0",
     "typescript": "^3.7.2"

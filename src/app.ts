@@ -27,7 +27,7 @@ const corsConfig = {
 const server = new InversifyExpressServer(container);
 
 server.setConfig(app => {
-  app.use(morgan('dev'));
+  if (process.env.NODE_ENV !== 'production') app.use(morgan('dev'));
   app.use(helmet());
   app.use(compression());
   app.use(cookieParser());

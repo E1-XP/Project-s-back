@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { Sequelize, DataTypes, Instance } from 'sequelize';
 
 export interface UserType {
@@ -31,7 +31,7 @@ const User = function(sequelize: Sequelize, DataTypes: DataTypes) {
     _User.belongsToMany(models.Drawing, {
       through: 'usersindrawings',
       foreignKey: 'userId',
-      otherKey:'drawingId'
+      otherKey: 'drawingId',
     });
     _User.hasMany(models.Message, {
       foreignKey: 'authorId',

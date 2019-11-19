@@ -3,7 +3,7 @@ import { controller, interfaces, httpPost } from 'inversify-express-utils';
 import { container } from './../container';
 import { TYPES } from './../container/types';
 
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { Request, Response, NextFunction } from 'express';
 
 import db from '../models';

@@ -42,9 +42,15 @@ export class DrawingController implements IDrawingController {
   }
 
   @httpPost('/save')
-  saveAsJPEG(req: Request, res: Response) {
+  @catchAsyncHTTP
+  async saveAsJPEG(req: Request, res: Response) {
     const { drawingId } = req.params;
     const { image } = req.body;
+
+    const drawing = await db.models.Drawing.findById(drawingId);
+
+    const version = drawing?.get({ plain: true }).version;
+    const outputVersion = version !== undefined ? version + 1 : 0;
 
     const dirPath = path.join(__dirname, `../../public/images`);
 
@@ -54,10 +60,15 @@ export class DrawingController implements IDrawingController {
 
     if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath);
 
-    fs.writeFileSync(`${dirPath}/${drawingId}.jpg`, buff);
+    const oldFilePath = `${dirPath}/${drawingId}-${version}.jpg`;
+    if (fs.existsSync(oldFilePath)) fs.unlinkSync(oldFilePath);
+
+    fs.writeFileSync(`${dirPath}/${drawingId}-${outputVersion}.jpg`, buff);
 
     console.log('file saved');
 
-    res.status(200).json({ message: 'success' });
+    res.status(200).json({
+      message: 'success',
+    });
   }
 }

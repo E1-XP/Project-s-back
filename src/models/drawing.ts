@@ -11,6 +11,7 @@ import { UserType } from './user';
 export interface IDrawing {
   id?: number;
   name: string;
+  version: number;
   creatorId: number;
   archived?: boolean;
   createdAt?: string;
@@ -26,6 +27,7 @@ export interface DrawingInstance extends Instance<IDrawing>, IDrawing {
 const Drawing = function(sequelize: Sequelize, DataTypes: DataTypes) {
   const _Drawing = sequelize.define<DrawingInstance, IDrawing>('drawing', {
     name: DataTypes.STRING,
+    version: DataTypes.INTEGER,
     creatorId: DataTypes.INTEGER,
   });
 

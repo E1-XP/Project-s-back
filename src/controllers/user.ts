@@ -45,7 +45,7 @@ export class UserController implements interfaces.Controller {
 
     const drawings = dbResp[0].drawings;
 
-    res.status(200).json({ drawings: drawings });
+    res.status(200).json({ drawings });
   }
 
   @httpPost('/drawings')
@@ -56,6 +56,7 @@ export class UserController implements interfaces.Controller {
 
     const drawing = await db.models.Drawing.create({
       name,
+      version: 0,
       creatorId: userId,
     });
 

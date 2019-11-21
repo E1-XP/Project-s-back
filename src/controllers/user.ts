@@ -1,3 +1,6 @@
+import fs from 'fs';
+import path from 'path';
+
 import { container } from './../container';
 import { TYPES } from './../container/types';
 import {
@@ -64,11 +67,23 @@ export class UserController implements interfaces.Controller {
 
     // return user drawings
     const dbResp: any = await db.models.User.findAll({
-      include: [{ model: db.models.Drawing }],
+      include: [
+        {
+          model: db.models.Drawing,
+        },
+      ],
       where: { id: userId },
     });
 
     const drawings = dbResp[0].drawings;
+
+    const dirPath = path.join(__dirname, `../../public`);
+    const srcPath = path.join(dirPath, `/default.jpg`);
+    const resPath = path.join(dirPath, `/images/${drawing.id}-v0.jpg`);
+
+    fs.copyFile(srcPath, resPath, err => {
+      if (err) throw err;
+    });
 
     res.status(200).json({
       currentId: drawing.id,

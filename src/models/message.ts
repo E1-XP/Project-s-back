@@ -35,7 +35,7 @@ const Message = function(sequelize: Sequelize, DataTypes: DataTypes) {
 
   _Message.associate = models => {
     _Message.belongsTo(models.User, {
-      foreignKey: 'id',
+      foreignKey: 'authorId',
     });
   };
 

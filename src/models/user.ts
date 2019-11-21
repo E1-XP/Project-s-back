@@ -33,9 +33,6 @@ const User = function(sequelize: Sequelize, DataTypes: DataTypes) {
       foreignKey: 'userId',
       otherKey: 'drawingId',
     });
-    _User.hasMany(models.Message, {
-      foreignKey: 'authorId',
-    });
   };
 
   _User.beforeCreate(async function(user: any): Promise<void> {

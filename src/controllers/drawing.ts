@@ -54,7 +54,7 @@ export class DrawingController implements IDrawingController {
     const outputVersion = version + 1;
 
     drawing.version = outputVersion;
-    drawing.save();
+    await drawing.save();
 
     const dirPath = path.join(__dirname, `../../public/images`);
 

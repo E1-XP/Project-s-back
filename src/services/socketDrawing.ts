@@ -44,16 +44,16 @@ export class SocketDrawingService implements ISocketDrawingService {
   onMouseUp(data: string) {
     if (!this.roomId) throw new Error('roomId not found');
 
+    const groupInfo = data
+      .split('|')
+      .slice(0, 3)
+      .map(Number);
+
     if (this.isGroupSameLengthAndOrderCheck(data, this.cachedPoints)) {
       // perform check on other users
       this.socket.broadcast.emit(`${this.roomId}/drawgroupcheck`, data);
     } else {
       console.log('incorrect data');
-
-      const groupInfo = data
-        .split('|')
-        .slice(0, 3)
-        .map(Number);
 
       this.socket.emit(`${this.roomId}/resendcorrectdrawdata`, groupInfo);
 
@@ -74,6 +74,11 @@ export class SocketDrawingService implements ISocketDrawingService {
 
     this.savePointsBulk(this.cachedPoints);
     this.cachedPoints = [];
+
+    const userId = groupInfo[0];
+    this.socket.broadcast
+      .to(this.roomId)
+      .emit(`${this.roomId}/mouseup`, userId);
   }
 
   @catchAsync

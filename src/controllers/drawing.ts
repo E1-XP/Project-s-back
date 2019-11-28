@@ -15,7 +15,7 @@ const { catchAsyncHTTP } = container.get<IErrorMiddleware>(
 
 export interface IDrawingController {
   addOwner: (req: Request, res: Response) => void;
-  saveAsJPEG: (req: Request, res: Response) => void;
+  saveAsFile: (req: Request, res: Response) => void;
 }
 
 @controller('/drawings/:drawingId', TYPES.AuthMiddleware)
@@ -42,9 +42,19 @@ export class DrawingController implements IDrawingController {
   }
 
   @httpPost('/save')
-  saveAsJPEG(req: Request, res: Response) {
+  @catchAsyncHTTP
+  async saveAsFile(req: Request, res: Response) {
     const { drawingId } = req.params;
     const { image } = req.body;
+
+    const drawing = await db.models.Drawing.findByPk(drawingId);
+    if (!drawing) return res.status(404).json({ message: 'drawing not found' });
+
+    const version = drawing.get({ plain: true }).version;
+    const outputVersion = version + 1;
+
+    drawing.version = outputVersion;
+    await drawing.save();
 
     const dirPath = path.join(__dirname, `../../public/images`);
 
@@ -54,10 +64,15 @@ export class DrawingController implements IDrawingController {
 
     if (!fs.existsSync(dirPath)) fs.mkdirSync(dirPath);
 
-    fs.writeFileSync(`${dirPath}/${drawingId}.jpg`, buff);
+    const oldFilePath = `${dirPath}/${drawingId}-v${version}.jpg`;
+    if (fs.existsSync(oldFilePath)) fs.unlinkSync(oldFilePath);
+
+    fs.writeFileSync(`${dirPath}/${drawingId}-v${outputVersion}.jpg`, buff);
 
     console.log('file saved');
 
-    res.status(200).json({ message: 'success' });
+    res.status(200).json({
+      message: 'success',
+    });
   }
 }

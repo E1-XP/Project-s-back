@@ -63,10 +63,9 @@ export class UserController implements interfaces.Controller {
       creatorId: userId,
     });
 
-    drawing.addUser(userId);
+    await drawing.addUser(userId);
 
-    // return user drawings
-    const dbResp: any = await db.models.User.findAll({
+    const userWithDrawings: any = await db.models.User.findAll({
       include: [
         {
           model: db.models.Drawing,
@@ -75,7 +74,7 @@ export class UserController implements interfaces.Controller {
       where: { id: userId },
     });
 
-    const drawings = dbResp[0].drawings;
+    const drawings = userWithDrawings[0].drawings;
 
     const dirPath = path.join(__dirname, `../../public`);
     const srcPath = path.join(dirPath, `/default.jpg`);
@@ -86,8 +85,8 @@ export class UserController implements interfaces.Controller {
     });
 
     res.status(200).json({
-      currentId: drawing.id,
       drawings,
+      currentId: drawing.id,
     });
   }
 

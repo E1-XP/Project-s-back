@@ -135,6 +135,11 @@ export class SocketRoomService implements ISocketRoomService {
       this.drawingService.onDrawChange.bind(this.drawingService),
     );
 
+    this.socket[mode](
+      `${this.roomId}/draw/reconnect`,
+      this.drawingService.onDrawReconnect.bind(this.drawingService),
+    );
+
     this.socket[mode](`${this.roomId}/setadmin`, this.setAdmin.bind(this));
     this.socket[mode]('disconnect', this.onRoomDisconnect.bind(this));
   }
@@ -256,7 +261,7 @@ export class SocketRoomService implements ISocketRoomService {
   async getRooms() {
     const allRooms = <Room[]>await db.models.Room.findAll({});
 
-    const rooms = <Room[]>allRooms.map(itm =>
+    const rooms = <Room[]>allRooms.map((itm) =>
       Object.keys(itm.dataValues).reduce((acc: any, key) => {
         if (key !== 'password') acc[key] = itm.dataValues[key];
         return acc;

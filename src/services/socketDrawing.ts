@@ -25,6 +25,7 @@ export interface ISocketDrawingService {
   onSendCorrectGroup: (data: string) => void;
   onDrawChange: (data: RoomJoinData) => void;
   onDrawReset: (data: RoomDrawResetData) => void;
+  onDrawReconnect: (points: DrawingPoint[]) => void;
   getRoomDrawingPoints(drawingId: number): Promise<DrawingPointsInstance[]>;
 }
 
@@ -44,10 +45,7 @@ export class SocketDrawingService implements ISocketDrawingService {
   onMouseUp(data: string) {
     if (!this.roomId) throw new Error('roomId not found');
 
-    const groupInfo = data
-      .split('|')
-      .slice(0, 3)
-      .map(Number);
+    const groupInfo = data.split('|').slice(0, 3).map(Number);
 
     if (this.isGroupSameLengthAndOrderCheck(data, this.cachedPoints)) {
       // perform check on other users
@@ -59,7 +57,7 @@ export class SocketDrawingService implements ISocketDrawingService {
 
       this.socket.once(
         `${this.roomId}/resendcorrectdrawdata`,
-        async correctGroup => {
+        async (correctGroup) => {
           if (!this.roomId) throw new Error('roomId not found');
           if (!correctGroup || !correctGroup.length) return;
 
@@ -84,7 +82,7 @@ export class SocketDrawingService implements ISocketDrawingService {
   @catchAsync
   async onSendCorrectGroup(data: string) {
     const [userIdStr, drawingIdStr, groupStr, tstamps] = data.split('|');
-    const test = tstamps.split('.').map(str => Number(str));
+    const test = tstamps.split('.').map((str) => Number(str));
 
     const correctGroup = await this.getRoomDrawingPointsGroup(
       Number(userIdStr),
@@ -117,6 +115,21 @@ export class SocketDrawingService implements ISocketDrawingService {
 
     this.server.to(this.roomId).emit(`${this.roomId}/draw/reset`, userId);
     this.resetDrawing(drawingId);
+  }
+
+  @catchAsync
+  async onDrawReconnect(offlinePoints: DrawingPoint[]) {
+    if (!this.roomId) throw new Error('roomId not found');
+    if (!offlinePoints.length) return;
+
+    const { drawingId } = offlinePoints[0];
+
+    await this.savePointsBulk(offlinePoints);
+    const existingDrawingPoints = await this.getRoomDrawingPoints(drawingId);
+
+    this.server
+      .in(this.roomId)
+      .emit(`${this.roomId}/draw/getexisting`, existingDrawingPoints);
   }
 
   private isGroupSameLengthAndOrderCheck(
@@ -155,7 +168,7 @@ export class SocketDrawingService implements ISocketDrawingService {
   }
 
   private async replaceDrawingPointsGroup(correctGroup: DrawingPoint[]) {
-    const idArr = correctGroup.map(p => p.id);
+    const idArr = correctGroup.map((p) => p.id);
 
     await db.models.DrawingPoints.destroy({
       where: { id: { [Op.in]: idArr } },

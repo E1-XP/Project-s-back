@@ -119,6 +119,8 @@ export class SocketDrawingService implements ISocketDrawingService {
 
   @catchAsync
   async onDrawReconnect(offlinePoints: DrawingPoint[]) {
+    console.log('on reconnect', this.roomId, offlinePoints.length);
+
     if (!this.roomId) throw new Error('roomId not found');
     if (!offlinePoints.length) return;
 

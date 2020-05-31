@@ -90,6 +90,11 @@ export class SocketRoomService implements ISocketRoomService {
       this.io.nsps['/'].adapter.rooms[roomId].sockets,
     ).reduce(this.reduceRoomUsers.bind(this), {});
 
+    this.socket.on(`${this.roomId}/draw/reconnect`, (data: any) => {
+      console.log(`received ${data.length} items`);
+    });
+
+    console.log('handlers listening now');
     this.toggleHandlers('on');
 
     this.io.to(roomId).emit(`${roomId}/messages`, messages);

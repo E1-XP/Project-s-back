@@ -26,7 +26,7 @@ export class SocketInitializer {
   constructor(server: Http2Server, redis: RedisClient) {
     this.server = server;
     this.redis = redis;
-    this.io = socket(server);
+    this.io = socket(server, { pingTimeout: 5000, pingInterval: 2000 });
 
     this.onInit();
   }

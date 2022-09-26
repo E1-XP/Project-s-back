@@ -54,6 +54,39 @@ export class SocketRoomService implements ISocketRoomService {
   private username: string | null = null;
   private userId: number | null = null;
 
+  private onRoomMessageBound = this.messageService.onRoomMessage.bind(
+    this.messageService,
+  );
+
+  private onMessageWriteBound = this.messageService.onMessageWrite.bind(
+    this.messageService,
+  );
+
+  private onDrawBound = this.drawingService.onDraw.bind(this.drawingService);
+
+  private onMouseUpBound = this.drawingService.onMouseUp.bind(
+    this.drawingService,
+  );
+
+  private onSendCorrectGroupBound = this.drawingService.onSendCorrectGroup.bind(
+    this.drawingService,
+  );
+
+  private onDrawResetBound = this.drawingService.onDrawReset.bind(
+    this.drawingService,
+  );
+
+  private onDrawChangeBound = this.drawingService.onDrawChange.bind(
+    this.drawingService,
+  );
+
+  private onDrawReconnectBound = this.drawingService.onDrawReconnect.bind(
+    this.drawingService,
+  );
+
+  private setAdminBound = this.setAdmin.bind(this);
+  private onRoomDisconnectBound = this.onRoomDisconnect.bind(this);
+
   constructor(
     private io: Server,
     private socket: Socket,
@@ -71,9 +104,8 @@ export class SocketRoomService implements ISocketRoomService {
       <any>redisDB.get(`${roomId}/drawingid`),
     ]);
 
-    const existingDrawingPoints = await this.drawingService.getRoomDrawingPoints(
-      drawingId,
-    );
+    const existingDrawingPoints =
+      await this.drawingService.getRoomDrawingPoints(drawingId);
 
     this.roomId = roomId;
     this.username = this.socket.handshake.query.user;
@@ -105,48 +137,33 @@ export class SocketRoomService implements ISocketRoomService {
   }
 
   private toggleHandlers(mode: 'on' | 'off') {
-    this.socket[mode](
-      `${this.roomId}/messages`,
-      this.messageService.onRoomMessage.bind(this.messageService),
-    );
+    this.socket[mode](`${this.roomId}/messages`, this.onRoomMessageBound);
 
     this.socket[mode](
       `${this.roomId}/messages/write`,
-      this.messageService.onMessageWrite.bind(this.messageService),
+      this.onMessageWriteBound,
     );
 
-    this.socket[mode](
-      `${this.roomId}/draw`,
-      this.drawingService.onDraw.bind(this.drawingService),
-    );
+    this.socket[mode](`${this.roomId}/draw`, this.onDrawBound);
 
-    this.socket[mode](
-      `${this.roomId}/draw/mouseup`,
-      this.drawingService.onMouseUp.bind(this.drawingService),
-    );
+    this.socket[mode](`${this.roomId}/draw/mouseup`, this.onMouseUpBound);
 
     this.socket[mode](
       `${this.roomId}/sendcorrectgroup`,
-      this.drawingService.onSendCorrectGroup.bind(this.drawingService),
+      this.onSendCorrectGroupBound,
     );
 
-    this.socket[mode](
-      `${this.roomId}/draw/reset`,
-      this.drawingService.onDrawReset.bind(this.drawingService),
-    );
+    this.socket[mode](`${this.roomId}/draw/reset`, this.onDrawResetBound);
 
-    this.socket[mode](
-      `${this.roomId}/draw/change`,
-      this.drawingService.onDrawChange.bind(this.drawingService),
-    );
+    this.socket[mode](`${this.roomId}/draw/change`, this.onDrawChangeBound);
 
     this.socket[mode](
       `${this.roomId}/draw/reconnect`,
-      this.drawingService.onDrawReconnect.bind(this.drawingService),
+      this.onDrawReconnectBound,
     );
 
-    this.socket[mode](`${this.roomId}/setadmin`, this.setAdmin.bind(this));
-    this.socket[mode]('disconnect', this.onRoomDisconnect.bind(this));
+    this.socket[mode](`${this.roomId}/setadmin`, this.setAdminBound);
+    this.socket[mode]('disconnect', this.onRoomDisconnectBound);
   }
 
   async onRoomLeave() {

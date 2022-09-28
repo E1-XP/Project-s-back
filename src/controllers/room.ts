@@ -30,8 +30,10 @@ export class RoomController implements RoomController {
 
     const room = await db.models.Room.findOne({ where: { roomId: roomid } });
 
-    if (room && room.getDataValue('password') === password) {
+    if (!room) {
+      res.status(404).send({ message: 'room not found' });
+    } else if (room && room.getDataValue('password') === password) {
       res.status(200).send({ message: 'success' });
-    } else res.status(401).send({ message: 'incorrect password/error' });
+    } else res.status(401).send({ message: 'incorrect password' });
   }
 }

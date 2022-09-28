@@ -76,11 +76,11 @@ export class UserController implements interfaces.Controller {
 
     const drawings = userWithDrawings[0].drawings;
 
-    const dirPath = path.join(__dirname, `../../public`);
+    const dirPath = path.join(__dirname, `../public`);
     const srcPath = path.join(dirPath, `/default.jpg`);
     const resPath = path.join(dirPath, `/images/${drawing.id}-v0.jpg`);
 
-    fs.copyFile(srcPath, resPath, err => {
+    fs.copyFile(srcPath, resPath, (err) => {
       if (err) throw err;
     });
 

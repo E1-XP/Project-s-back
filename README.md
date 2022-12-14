@@ -8,7 +8,7 @@ My most complicated server. I combined a SQL database with websockets and Redis 
 
 ## Demo
 
-https://project-s.gtxcodeworks.site/
+https://project-s.gtxcodeworks.online/
 ## Tech Stack
 
 - Typescript

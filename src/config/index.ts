@@ -1,6 +1,6 @@
 export default {
   originURL:
     process.env.NODE_ENV === 'production'
-      ? 'https://project-s-front.gtxcodeworks.site'
+      ? process.env.ORIGIN_URL
       : 'http://localhost:8080',
 };

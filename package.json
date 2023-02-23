@@ -36,7 +36,7 @@
     "mysql2": "^1.7.0",
     "redis": "^2.8.0",
     "reflect-metadata": "^0.1.13",
-    "sequelize": "^4.44.3",
+    "sequelize": "^6.28.2",
     "socket.io": "^2.3.0"
   },
   "devDependencies": {
